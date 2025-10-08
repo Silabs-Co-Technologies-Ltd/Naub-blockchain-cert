@@ -1,0 +1,44 @@
+{
+  "NITDA-2024-001": {
+    "id": "NITDA-2024-001",
+    "companyName": "TechVision Solutions Ltd",
+    "category": "Software Development",
+    "dateIssued": "2024-01-15",
+    "dateExpiry": "2025-01-15",
+    "status": "valid",
+    "blockchainHash": "0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890",
+    "transactionHash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+    "blockNumber": 1234567,
+    "email": "info@techvision.ng",
+    "phone": "+234-801-234-5678",
+    "address": "Lagos, Nigeria"
+  },
+  "NITDA-2024-002": {
+    "id": "NITDA-2024-002",
+    "companyName": "DataSecure Systems",
+    "category": "Cybersecurity",
+    "dateIssued": "2024-02-20",
+    "dateExpiry": "2025-02-20",
+    "status": "valid",
+    "blockchainHash": "0x2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890ab",
+    "transactionHash": "0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
+    "blockNumber": 1234890,
+    "email": "contact@datasecure.ng",
+    "phone": "+234-802-345-6789",
+    "address": "Abuja, Nigeria"
+  },
+  "NITDA-2025-496100579": {
+    "id": "NITDA-2025-496100579",
+    "companyName": "Tekkd Solutions",
+    "category": "Software Development",
+    "dateIssued": "2025-10-08",
+    "dateExpiry": "2026-10-08",
+    "status": "valid",
+    "blockchainHash": "0x000000000000000000000000000000000000000000000000000000006f044ead",
+    "transactionHash": "0x69b6ebfbd7d532e8476df31e06e72798f9f4d5c5ed94729d0e80205118a2cf0c",
+    "blockNumber": 1207735,
+    "email": "tomiwakukoyiweb@gmail.com",
+    "phone": "+817083325053",
+    "address": "14, Adebisi Close, off ajao road"
+  }
+}
