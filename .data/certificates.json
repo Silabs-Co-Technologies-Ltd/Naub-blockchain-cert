@@ -68,5 +68,19 @@
     "email": "tomiwakukoyiweb@gmail.com",
     "phone": "+817083325053",
     "address": "14, Adebisi Close, off ajao road"
+  },
+  "NITDA-2025-199589110": {
+    "id": "NITDA-2025-199589110",
+    "companyName": "Tekkd Solutions limited nigeria",
+    "category": "Mobile App Development",
+    "dateIssued": "2025-10-09",
+    "dateExpiry": "2026-10-09",
+    "status": "valid",
+    "blockchainHash": "0x000000000000000000000000000000000000000000000000000000001311bd8a",
+    "transactionHash": "0x084e54f7d5bb0339e58f4ea211d55ab8a9eece0a5e90130279a6c9a619221857",
+    "blockNumber": 1649056,
+    "email": "tomiwakukoyiweb@gmail.com",
+    "phone": "+817083325053",
+    "address": "14, Adebisi Close, off ajao road"
   }
 }

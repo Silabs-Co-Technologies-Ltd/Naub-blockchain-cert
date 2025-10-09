@@ -1,71 +1,89 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, FileCheck, AlertCircle, Clock, Search, Plus, LogOut, BarChart3, Users, Activity } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import type { Certificate } from "@/lib/database"
-import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Shield,
+  FileCheck,
+  AlertCircle,
+  Clock,
+  Search,
+  Plus,
+  LogOut,
+  BarChart3,
+  Users,
+  Activity,
+  ArrowLeft,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { Certificate } from "@/lib/database";
+import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
 
 interface Analytics {
-  totalCertificates: number
-  validCertificates: number
-  expiredCertificates: number
-  revokedCertificates: number
-  totalVerifications: number
+  totalCertificates: number;
+  validCertificates: number;
+  expiredCertificates: number;
+  revokedCertificates: number;
+  totalVerifications: number;
   recentVerifications: Array<{
-    id: string
-    certificateId: string
-    timestamp: number
-  }>
+    id: string;
+    certificateId: string;
+    timestamp: number;
+  }>;
 }
 
 export default function AdminDashboard() {
-  const [certificates, setCertificates] = useState<Certificate[]>([])
-  const [analytics, setAnalytics] = useState<Analytics | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const router = useRouter()
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   const loadData = async () => {
     try {
       const [certsResponse, analyticsResponse] = await Promise.all([
         fetch("/api/certificates"),
         fetch("/api/admin/analytics"),
-      ])
+      ]);
 
       if (certsResponse.ok) {
-        const certsData = await certsResponse.json()
-        setCertificates(certsData)
+        const certsData = await certsResponse.json();
+        setCertificates(certsData);
       }
 
       if (analyticsResponse.ok) {
-        const analyticsData = await analyticsResponse.json()
-        setAnalytics(analyticsData)
+        const analyticsData = await analyticsResponse.json();
+        setAnalytics(analyticsData);
       }
     } catch (error) {
-      console.error("[v0] Error loading data:", error)
+      console.error("[v0] Error loading data:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleLogout = () => {
-    router.push("/admin")
-  }
+    router.push("/admin");
+  };
 
   const filteredCertificates = certificates.filter(
     (cert) =>
       cert.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cert.companyName.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+      cert.companyName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -75,7 +93,7 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -83,14 +101,28 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="font-bold text-xl">NITDA Admin Dashboard</h1>
-              <p className="text-xs text-muted-foreground">Certificate Management System</p>
+          <div className="flex items-center gap-4">
+            <Link href="/admin">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Login
+              </Button>
+            </Link>
+            <div className="flex items-center gap-3">
+              <Shield className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="font-bold text-xl">NITDA Admin Dashboard</h1>
+                <p className="text-xs text-muted-foreground">
+                  Certificate Management System
+                </p>
+              </div>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
+          <Button
+            variant="outline"
+            onClick={handleLogout}
+            className="gap-2 bg-transparent"
+          >
             <LogOut className="h-4 w-4" />
             Logout
           </Button>
@@ -106,7 +138,9 @@ export default function AdminDashboard() {
                 <FileCheck className="h-4 w-4" />
                 Total Certificates
               </CardDescription>
-              <CardTitle className="text-3xl">{analytics?.totalCertificates || 0}</CardTitle>
+              <CardTitle className="text-3xl">
+                {analytics?.totalCertificates || 0}
+              </CardTitle>
             </CardHeader>
           </Card>
 
@@ -116,7 +150,9 @@ export default function AdminDashboard() {
                 <Shield className="h-4 w-4 text-green-600" />
                 Valid
               </CardDescription>
-              <CardTitle className="text-3xl text-green-600">{analytics?.validCertificates || 0}</CardTitle>
+              <CardTitle className="text-3xl text-green-600">
+                {analytics?.validCertificates || 0}
+              </CardTitle>
             </CardHeader>
           </Card>
 
@@ -126,7 +162,9 @@ export default function AdminDashboard() {
                 <Clock className="h-4 w-4 text-yellow-600" />
                 Expired
               </CardDescription>
-              <CardTitle className="text-3xl text-yellow-600">{analytics?.expiredCertificates || 0}</CardTitle>
+              <CardTitle className="text-3xl text-yellow-600">
+                {analytics?.expiredCertificates || 0}
+              </CardTitle>
             </CardHeader>
           </Card>
 
@@ -136,7 +174,9 @@ export default function AdminDashboard() {
                 <AlertCircle className="h-4 w-4 text-red-600" />
                 Revoked
               </CardDescription>
-              <CardTitle className="text-3xl text-red-600">{analytics?.revokedCertificates || 0}</CardTitle>
+              <CardTitle className="text-3xl text-red-600">
+                {analytics?.revokedCertificates || 0}
+              </CardTitle>
             </CardHeader>
           </Card>
         </div>
@@ -149,7 +189,9 @@ export default function AdminDashboard() {
                 <Activity className="h-5 w-5 text-primary" />
                 Total Verifications
               </CardTitle>
-              <div className="text-2xl font-bold">{analytics?.totalVerifications || 0}</div>
+              <div className="text-2xl font-bold">
+                {analytics?.totalVerifications || 0}
+              </div>
             </CardHeader>
           </Card>
 
@@ -159,7 +201,9 @@ export default function AdminDashboard() {
                 <Users className="h-5 w-5 text-primary" />
                 Active Vendors
               </CardTitle>
-              <div className="text-2xl font-bold">{analytics?.validCertificates || 0}</div>
+              <div className="text-2xl font-bold">
+                {analytics?.validCertificates || 0}
+              </div>
             </CardHeader>
           </Card>
 
@@ -169,7 +213,9 @@ export default function AdminDashboard() {
                 <BarChart3 className="h-5 w-5 text-primary" />
                 System Status
               </CardTitle>
-              <div className="text-2xl font-bold text-green-600">Operational</div>
+              <div className="text-2xl font-bold text-green-600">
+                Operational
+              </div>
             </CardHeader>
           </Card>
         </div>
@@ -180,7 +226,9 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Certificate Management</CardTitle>
-                <CardDescription>View and manage all issued certificates</CardDescription>
+                <CardDescription>
+                  View and manage all issued certificates
+                </CardDescription>
               </div>
               <Link href="/admin/dashboard/issue">
                 <Button className="gap-2">
@@ -211,8 +259,12 @@ export default function AdminDashboard() {
                 <table className="w-full">
                   <thead className="bg-muted">
                     <tr>
-                      <th className="text-left p-4 font-medium">Certificate ID</th>
-                      <th className="text-left p-4 font-medium">Company Name</th>
+                      <th className="text-left p-4 font-medium">
+                        Certificate ID
+                      </th>
+                      <th className="text-left p-4 font-medium">
+                        Company Name
+                      </th>
                       <th className="text-left p-4 font-medium">Category</th>
                       <th className="text-left p-4 font-medium">Issue Date</th>
                       <th className="text-left p-4 font-medium">Expiry Date</th>
@@ -225,14 +277,26 @@ export default function AdminDashboard() {
                       <tr key={cert.id} className="border-t hover:bg-muted/50">
                         <td className="p-4 font-mono text-sm">{cert.id}</td>
                         <td className="p-4">{cert.companyName}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{cert.category}</td>
-                        <td className="p-4 text-sm">{formatDate(cert.dateIssued)}</td>
-                        <td className="p-4 text-sm">{formatDate(cert.dateExpiry)}</td>
-                        <td className="p-4">
-                          <Badge className={getCertificateStatusColor(cert.status)}>{cert.status}</Badge>
+                        <td className="p-4 text-sm text-muted-foreground">
+                          {cert.category}
+                        </td>
+                        <td className="p-4 text-sm">
+                          {formatDate(cert.dateIssued)}
+                        </td>
+                        <td className="p-4 text-sm">
+                          {formatDate(cert.dateExpiry)}
                         </td>
                         <td className="p-4">
-                          <Link href={`/admin/dashboard/certificate/${cert.id}`}>
+                          <Badge
+                            className={getCertificateStatusColor(cert.status)}
+                          >
+                            {cert.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <Link
+                            href={`/admin/dashboard/certificate/${cert.id}`}
+                          >
                             <Button variant="ghost" size="sm">
                               View
                             </Button>
@@ -255,5 +319,5 @@ export default function AdminDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
