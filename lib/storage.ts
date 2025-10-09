@@ -185,10 +185,6 @@ class FileStorage {
       for (const cert of sampleCerts) {
         await this.createCertificate(cert);
       }
-
-      // Initialize blockchain records for sample certificates
-      const { blockchain } = await import("./blockchain");
-      blockchain.initializeSampleRecords();
     }
   }
 }

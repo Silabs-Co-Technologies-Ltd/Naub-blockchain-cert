@@ -40,5 +40,33 @@
     "email": "tomiwakukoyiweb@gmail.com",
     "phone": "+817083325053",
     "address": "14, Adebisi Close, off ajao road"
+  },
+  "NITDA-2025-810084593": {
+    "id": "NITDA-2025-810084593",
+    "companyName": "Tekkd Solutions",
+    "category": "IT Consulting",
+    "dateIssued": "2025-10-09",
+    "dateExpiry": "2027-10-09",
+    "status": "valid",
+    "blockchainHash": "0x000000000000000000000000000000000000000000000000000000000151b7ac",
+    "transactionHash": "0x8dd339f06272c911edda77257d73ad83902b325f3f44704551a2aab390254901",
+    "blockNumber": 1054922,
+    "email": "tomiwakukoyiweb@gmail.com",
+    "phone": "+817083325053",
+    "address": "14, Adebisi Close, off ajao road"
+  },
+  "NITDA-2025-164184474": {
+    "id": "NITDA-2025-164184474",
+    "companyName": "Tekkd Solutions limited",
+    "category": "IT Consulting",
+    "dateIssued": "2025-10-09",
+    "dateExpiry": "2026-10-09",
+    "status": "valid",
+    "blockchainHash": "0x0000000000000000000000000000000000000000000000000000000008df77c0",
+    "transactionHash": "0x886590195bcc97151711101973d3b6bb13a63651b23fc3025327d9a08efb63ed",
+    "blockNumber": 1247285,
+    "email": "tomiwakukoyiweb@gmail.com",
+    "phone": "+817083325053",
+    "address": "14, Adebisi Close, off ajao road"
   }
 }

@@ -45,8 +45,11 @@ class DatabaseService {
 
   private async initializeStorage() {
     const { fileStorage } = await import("./storage");
+    const { blockchain } = await import("./blockchain");
     this.fileStorage = fileStorage;
     await this.fileStorage.initializeSampleData();
+    // Initialize blockchain records only once to prevent data loss
+    blockchain.initializeSampleRecords();
   }
 
   // Certificate operations
