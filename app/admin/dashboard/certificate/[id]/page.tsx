@@ -335,7 +335,7 @@ export default function CertificateDetailPage() {
                       Revocation Transaction
                     </p>
                     <div className="flex items-center gap-2">
-                      <p className="font-mono text-sm break-all bg-red-50 dark:bg-red-950 p-2 rounded flex-1 border border-red-200 dark:border-red-800">
+                      <p className="font-mono text-sm break-all bg-red-50  p-2 rounded flex-1 border border-red-200 dark:border-red-800">
                         {certificate.revocationTxHash}
                       </p>
                       <Button
