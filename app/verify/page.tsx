@@ -37,6 +37,8 @@ export default function VerifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -61,6 +63,9 @@ export default function VerifyPage() {
         setCertificate(data.certificate);
         setBlockchainInfo(data.blockchain);
 
+        // Generate AI summary for the verified certificate
+        generateAISummary(data.certificate);
+
         // Log verification
         await fetch("/api/verify/log", {
           method: "POST",
@@ -81,6 +86,112 @@ export default function VerifyPage() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     verifyById(certificateId);
+  };
+
+  const generateAISummary = async (cert: Certificate) => {
+    setIsGeneratingSummary(true);
+    setAiSummary(null);
+
+    try {
+      const response = await fetch("/api/verify/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ certificate: cert }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiSummary(data.summary);
+      } else {
+        console.error("Failed to generate AI summary");
+      }
+    } catch (error) {
+      console.error("Error generating AI summary:", error);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const parseMultilingualSummary = (summary: string) => {
+    // Split the summary into language sections
+    const englishMatch = summary.match(/ENGLISH:\s*([^]*?)(?=YORUBA:|$)/);
+    const yorubaMatch = summary.match(/YORUBA:\s*([^]*?)(?=HAUSA:|$)/);
+    const hausaMatch = summary.match(/HAUSA:\s*([^]*?)$/);
+
+    // Check if any section appears incomplete (truncated)
+    const isIncomplete = (text: string) => {
+      return (
+        text.trim().endsWith("...") ||
+        text.trim().length < 20 ||
+        text.trim().endsWith("Wannan takardar shaid")
+      ); // Specific case from user's example
+    };
+
+    const sections = [];
+
+    if (englishMatch) {
+      const text = englishMatch[1].trim();
+      sections.push({
+        language: "English",
+        text: text,
+        flag: "🇬🇧",
+        incomplete: isIncomplete(text),
+      });
+    }
+
+    if (yorubaMatch) {
+      const text = yorubaMatch[1].trim();
+      sections.push({
+        language: "Yoruba",
+        text: text,
+        flag: "🇳🇬",
+        incomplete: isIncomplete(text),
+      });
+    }
+
+    if (hausaMatch) {
+      const text = hausaMatch[1].trim();
+      sections.push({
+        language: "Hausa",
+        text: text,
+        flag: "🇳🇬",
+        incomplete: isIncomplete(text),
+      });
+    }
+
+    // If no language sections found, display as single text
+    if (sections.length === 0) {
+      return <p className="leading-relaxed">{summary}</p>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {sections.map((section, index) => (
+          <div key={index} className="border-l-4 border-blue-200 pl-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">{section.flag}</span>
+              <h4 className="font-semibold text-sm uppercase tracking-wide">
+                {section.language}
+              </h4>
+              {section.incomplete && (
+                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                  Incomplete Response
+                </span>
+              )}
+            </div>
+            <p className="leading-relaxed text-sm">
+              {section.text}
+              {section.incomplete && (
+                <span className="text-yellow-600 font-medium">
+                  {" "}
+                  [Response appears to be cut off]
+                </span>
+              )}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const handleQRScan = (data: string) => {
@@ -167,50 +278,51 @@ export default function VerifyPage() {
           <>
             {certificate ? (
               <div className="space-y-6">
-                {/* Status Banner */}
-                {certificate.status === "valid" && (
-                  <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 flex items-start gap-4">
-                    <CheckCircle className="h-8 w-8 text-green-600 flex-shrink-0 mt-1" />
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-green-900 mb-2">
-                        Certificate is Valid
-                      </h3>
-                      <p className="text-green-700">
-                        This certificate has been verified on the blockchain and
-                        is currently active.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {certificate.status === "expired" && (
-                  <div className="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-6 flex items-start gap-4">
-                    <AlertCircle className="h-8 w-8 text-yellow-600 flex-shrink-0 mt-1" />
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-yellow-900 mb-2">
-                        Certificate Expired
-                      </h3>
-                      <p className="text-yellow-700">
-                        This certificate was valid but has now expired. Please
-                        contact the vendor for renewal.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {certificate.status === "revoked" && (
-                  <div className="bg-red-50 border-2 border-red-500 rounded-lg p-6 flex items-start gap-4">
-                    <XCircle className="h-8 w-8 text-red-600 flex-shrink-0 mt-1" />
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-red-900 mb-2">
-                        Certificate Revoked
-                      </h3>
-                      <p className="text-red-700">
-                        This certificate has been revoked by NITDA and is no
-                        longer valid. Do not trust this certificate.
-                      </p>
-                    </div>
-                  </div>
+                {/* AI Verification Summary */}
+                {(aiSummary || isGeneratingSummary) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-primary" />
+                        AI Verification Summary
+                      </CardTitle>
+                      <CardDescription>
+                        Automated analysis of certificate authenticity
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isGeneratingSummary ? (
+                        <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                          <p className="text-muted-foreground">
+                            Generating AI summary...
+                          </p>
+                        </div>
+                      ) : aiSummary ? (
+                        <div
+                          className={`p-4 rounded-lg border ${
+                            certificate.status === "valid"
+                              ? "bg-green-50 border-green-200"
+                              : certificate.status === "expired"
+                              ? "bg-yellow-50 border-yellow-200"
+                              : "bg-red-50 border-red-200"
+                          }`}
+                        >
+                          <div
+                            className={`space-y-4 ${
+                              certificate.status === "valid"
+                                ? "text-green-800"
+                                : certificate.status === "expired"
+                                ? "text-yellow-800"
+                                : "text-red-800"
+                            }`}
+                          >
+                            {parseMultilingualSummary(aiSummary)}
+                          </div>
+                        </div>
+                      ) : null}
+                    </CardContent>
+                  </Card>
                 )}
 
                 {/* Certificate Details */}

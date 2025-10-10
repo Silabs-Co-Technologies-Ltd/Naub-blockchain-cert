@@ -11,10 +11,55 @@ This system provides a secure, tamper-proof way to issue and verify digital cert
 - ✅ **Real Blockchain Integration** - Uses Polygon Amoy testnet for actual transactions
 - ✅ **Tamper-Proof Certificates** - SHA-256 cryptographic hashing
 - ✅ **Public Verification** - Anyone can verify certificates using blockchain
+- ✅ **AI Verification Summary** - Intelligent analysis of certificate authenticity
 - ✅ **Admin Dashboard** - Complete certificate management interface
 - ✅ **QR Code Support** - Easy certificate sharing and verification
 - ✅ **Analytics Dashboard** - Certificate statistics and insights
 - ✅ **Responsive Design** - Works on desktop and mobile devices
+
+## 🤖 AI Verification Summary
+
+The system automatically generates intelligent verification summaries for every certificate verification:
+
+### With AI (Google Gemini Integration)
+```
+🇬🇧 ENGLISH: This certificate, issued to TechBridge Solutions under the Cybersecurity Services category, 
+was validated successfully on the blockchain. It remains valid until Dec 2025 and shows no 
+signs of revocation or tampering.
+
+🇳🇬 YORUBA: Iwe-ẹri yii, ti a fi fun TechBridge Solutions labẹ ẹka Cybersecurity Services, 
+ti jẹrisi ni aaye lori blockchain. O tun dara titi Dec 2025 ati pe ko fi ami ti iyọkuro han.
+
+🇳🇬 HAUSA: Wannan takardar shaida, wacce aka ba wa TechBridge Solutions a ƙarƙashin rukunin 
+Cybersecurity Services, an tabbatar da ita a kan blockchain. Tana da inganci har zuwa Dec 2025.
+```
+
+### Without AI (Template-Based)
+**Valid Certificate (Green Background):**
+```
+✅ This certificate, issued to TechBridge Solutions under the Cybersecurity Services category, 
+has been validated successfully on the blockchain. It remains valid until 2025-01-15 and 
+shows no signs of revocation or tampering. The certificate was issued on 2024-01-15 and 
+is currently active.
+```
+
+**Revoked Certificate (Red Background):**
+```
+❌ This certificate, issued to TechBridge Solutions under the Cybersecurity Services category, 
+has been permanently revoked by NITDA. The revocation has been recorded on the blockchain 
+and this certificate is no longer valid. Do not trust this certificate for any purpose 
+as it has been officially invalidated.
+```
+
+**Features:**
+- 🧠 **Intelligent Analysis** - AI-powered verification summaries using Google Gemini 2.0 Flash
+- 🌍 **Multilingual Support** - Generates summaries in English, Yoruba, and Hausa simultaneously
+- 📝 **Professional Format** - Consistent, formal language with system instructions
+- 🔄 **Automatic Generation** - Triggers on every certificate verification
+- 🛡️ **Fallback System** - Works even without AI API access
+- 🎯 **Context-Aware** - Considers certificate status, dates, and blockchain verification
+- ⚡ **Fast Response** - Optimized for quick summary generation
+- 🚫 **No Asterisks** - Clean formatting without special characters
 
 ## 🔒 Why Blockchain? Security Over Database-Only
 

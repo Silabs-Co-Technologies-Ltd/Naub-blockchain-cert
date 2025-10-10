@@ -50,12 +50,15 @@
     "category": "Software Development",
     "dateIssued": "2025-10-10",
     "dateExpiry": "2026-10-10",
-    "status": "valid",
+    "status": "revoked",
     "blockchainHash": "0x55b0ae8b54fd402d9924699aa9f5003cfa9775e809215cddf18bfbd0ac759b0c",
     "transactionHash": "0x901d75252d7e1568cc9f27430684785bfc3b0b307c9af48980bae431bec9054c",
     "blockNumber": 27515277,
     "email": "tomiwakukoyiweb@gmail.com",
     "phone": "+817083325053",
-    "address": "sss"
+    "address": "sss",
+    "revocationTxHash": "0x47bd08e0c1bdb3d12f731e987a9cb97c1c8cbc232c3d1ffa1923837f4e5ba419",
+    "revocationBlockNumber": 27515540,
+    "revokedAt": "2025-10-10T09:32:10.806Z"
   }
 }
