@@ -42,7 +42,11 @@ const provider = new ethers.JsonRpcProvider(rpcUrl);
 const privateKey = process.env.TEST_WALLET_PRIVATE_KEY;
 let wallet: ethers.Wallet | null = null;
 
-if (privateKey && privateKey !== "your_private_key_here") {
+if (
+  privateKey &&
+  privateKey !== "your_private_key_here" &&
+  privateKey.trim() !== ""
+) {
   try {
     wallet = new ethers.Wallet(privateKey, provider);
     console.log(
@@ -51,12 +55,13 @@ if (privateKey && privateKey !== "your_private_key_here") {
     );
   } catch (error) {
     console.warn(
-      "[Blockchain] Invalid private key, falling back to simulation mode"
+      "[Blockchain] Invalid private key, falling back to simulation mode:",
+      error
     );
   }
 } else {
-  console.warn(
-    "[Blockchain] No private key provided, running in simulation mode"
+  console.log(
+    "[Blockchain] No private key provided, running in simulation mode (this is normal for development)"
   );
 }
 
