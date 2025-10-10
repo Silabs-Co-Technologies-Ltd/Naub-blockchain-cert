@@ -50,6 +50,9 @@ export async function POST(request: Request) {
       certificateData
     );
 
+    // Log blockchain result for debugging
+    console.log(`[API] Blockchain result:`, blockchainRecord);
+
     // Create certificate in database
     const certificate: Certificate = {
       id: certificateId,

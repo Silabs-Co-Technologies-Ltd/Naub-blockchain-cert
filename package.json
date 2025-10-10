@@ -1,6 +1,7 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "nitda-blockchain-certificate-system",
+  "version": "1.0.0",
+  "description": "Blockchain-powered digital certificate system for IT service providers",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -44,6 +45,7 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+    "ethers": "^6.15.0",
     "geist": "latest",
     "input-otp": "1.4.1",
     "jsqr": "latest",
@@ -72,5 +74,6 @@
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"
-  }
+  },
+  "type": "module"
 }

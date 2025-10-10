@@ -1,26 +1,8 @@
 [
   {
-    "id": "VER-1760006766808",
-    "certificateId": "NITDA-2024-001",
-    "timestamp": 1760006766808,
-    "ipAddress": "::1"
-  },
-  {
-    "id": "VER-1760007074762",
-    "certificateId": "NITDA-2024-001",
-    "timestamp": 1760007074762,
-    "ipAddress": "::1"
-  },
-  {
-    "id": "VER-1760008131489",
-    "certificateId": "NITDA-2025-810084593",
-    "timestamp": 1760008131489,
-    "ipAddress": "::1"
-  },
-  {
-    "id": "VER-1760008248643",
-    "certificateId": "NITDA-2025-810084593",
-    "timestamp": 1760008248643,
+    "id": "VER-1760049427388",
+    "certificateId": "NITDA-2025-325876508",
+    "timestamp": 1760049427388,
     "ipAddress": "::1"
   }
 ]

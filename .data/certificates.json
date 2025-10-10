@@ -27,60 +27,21 @@
     "phone": "+234-802-345-6789",
     "address": "Abuja, Nigeria"
   },
-  "NITDA-2025-496100579": {
-    "id": "NITDA-2025-496100579",
-    "companyName": "Tekkd Solutions",
-    "category": "Software Development",
-    "dateIssued": "2025-10-08",
-    "dateExpiry": "2026-10-08",
-    "status": "valid",
-    "blockchainHash": "0x000000000000000000000000000000000000000000000000000000006f044ead",
-    "transactionHash": "0x69b6ebfbd7d532e8476df31e06e72798f9f4d5c5ed94729d0e80205118a2cf0c",
-    "blockNumber": 1207735,
-    "email": "tomiwakukoyiweb@gmail.com",
-    "phone": "+817083325053",
-    "address": "14, Adebisi Close, off ajao road"
-  },
-  "NITDA-2025-810084593": {
-    "id": "NITDA-2025-810084593",
-    "companyName": "Tekkd Solutions",
-    "category": "IT Consulting",
-    "dateIssued": "2025-10-09",
-    "dateExpiry": "2027-10-09",
-    "status": "valid",
-    "blockchainHash": "0x000000000000000000000000000000000000000000000000000000000151b7ac",
-    "transactionHash": "0x8dd339f06272c911edda77257d73ad83902b325f3f44704551a2aab390254901",
-    "blockNumber": 1054922,
-    "email": "tomiwakukoyiweb@gmail.com",
-    "phone": "+817083325053",
-    "address": "14, Adebisi Close, off ajao road"
-  },
-  "NITDA-2025-164184474": {
-    "id": "NITDA-2025-164184474",
-    "companyName": "Tekkd Solutions limited",
-    "category": "IT Consulting",
-    "dateIssued": "2025-10-09",
-    "dateExpiry": "2026-10-09",
-    "status": "valid",
-    "blockchainHash": "0x0000000000000000000000000000000000000000000000000000000008df77c0",
-    "transactionHash": "0x886590195bcc97151711101973d3b6bb13a63651b23fc3025327d9a08efb63ed",
-    "blockNumber": 1247285,
-    "email": "tomiwakukoyiweb@gmail.com",
-    "phone": "+817083325053",
-    "address": "14, Adebisi Close, off ajao road"
-  },
-  "NITDA-2025-199589110": {
-    "id": "NITDA-2025-199589110",
+  "NITDA-2025-325876508": {
+    "id": "NITDA-2025-325876508",
     "companyName": "Tekkd Solutions limited nigeria",
-    "category": "Mobile App Development",
+    "category": "IT Consulting",
     "dateIssued": "2025-10-09",
     "dateExpiry": "2026-10-09",
-    "status": "valid",
-    "blockchainHash": "0x000000000000000000000000000000000000000000000000000000001311bd8a",
-    "transactionHash": "0x084e54f7d5bb0339e58f4ea211d55ab8a9eece0a5e90130279a6c9a619221857",
-    "blockNumber": 1649056,
+    "status": "revoked",
+    "blockchainHash": "0x8839ed633f43796aa26496380ea3fdc64fab87e7cca77a3107ebe94b631959ff",
+    "transactionHash": "0x3f195aa011921104eab5f6640ee99aa3b2b1b843a5f9e4242d9a411f30cb123c",
+    "blockNumber": 27495842,
     "email": "tomiwakukoyiweb@gmail.com",
     "phone": "+817083325053",
-    "address": "14, Adebisi Close, off ajao road"
+    "address": "Lagos",
+    "revocationTxHash": "0xc59e98ed6427bf380730a3013016a138f9f8c8c8ef4e858c9f424752b3f631e2",
+    "revocationBlockNumber": 27495925,
+    "revokedAt": "2025-10-09T22:38:20.304Z"
   }
 }
