@@ -337,7 +337,7 @@ export default function VerifyPage() {
                             Revocation Transaction
                           </p>
                           <div className="flex items-center gap-2">
-                            <div className="bg-red-50 dark:bg-red-950 p-3 rounded font-mono text-sm break-all flex-1 border border-red-200 dark:border-red-800">
+                            <div className="bg-red-50 p-3 rounded font-mono text-sm break-all flex-1 border border-red-200 dark:border-red-800">
                               {certificate.revocationTxHash}
                             </div>
                             <Button
