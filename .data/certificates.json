@@ -60,5 +60,19 @@
     "revocationTxHash": "0x47bd08e0c1bdb3d12f731e987a9cb97c1c8cbc232c3d1ffa1923837f4e5ba419",
     "revocationBlockNumber": 27515540,
     "revokedAt": "2025-10-10T09:32:10.806Z"
+  },
+  "NITDA-2025-851995317": {
+    "id": "NITDA-2025-851995317",
+    "companyName": "tomi inc",
+    "category": "Software Development",
+    "dateIssued": "2025-10-10",
+    "dateExpiry": "2026-10-10",
+    "status": "valid",
+    "blockchainHash": "0x1c1261ef3929539123e684ebeecebe810ebd96a8acd1fe564e3ac10eddf6a212",
+    "transactionHash": "0x77865f8303bad6e9a4b40c5c5539f16d23a3694d6ea55ddae7319b2bcc9b3ef2",
+    "blockNumber": 27517605,
+    "email": "tomiwakukoyi07@gmail.com",
+    "phone": "+2347083325053",
+    "address": "14, Adebisi Close, off ajao road"
   }
 }
