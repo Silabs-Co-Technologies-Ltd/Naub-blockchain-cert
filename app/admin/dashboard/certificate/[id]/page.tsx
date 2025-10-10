@@ -304,25 +304,57 @@ export default function CertificateDetailPage() {
                   {certificate.blockchainHash}
                 </p>
               </div>
+
+              {/* Original Certificate Transaction */}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Transaction Hash
+                  Issuance Transaction
                 </p>
                 <div className="flex items-center gap-2">
                   <p className="font-mono text-sm break-all bg-muted p-2 rounded flex-1">
                     {certificate.transactionHash}
                   </p>
-                  <Button variant="outline" size="icon">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    title="View on blockchain explorer"
+                  >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Block Number</p>
-                <p className="font-mono font-semibold">
-                  {certificate.blockNumber}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Block: {certificate.blockNumber}
                 </p>
               </div>
+
+              {/* Revocation Transaction (if revoked) */}
+              {certificate.status === "revoked" &&
+                certificate.revocationTxHash && (
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Revocation Transaction
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-sm break-all bg-red-50 dark:bg-red-950 p-2 rounded flex-1 border border-red-200 dark:border-red-800">
+                        {certificate.revocationTxHash}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        title="View revocation on blockchain explorer"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Block: {certificate.revocationBlockNumber}
+                    </p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      Revoked:{" "}
+                      {new Date(certificate.revokedAt!).toLocaleString()}
+                    </p>
+                  </div>
+                )}
             </CardContent>
           </Card>
 

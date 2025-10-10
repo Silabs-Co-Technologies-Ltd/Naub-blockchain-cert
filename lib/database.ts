@@ -14,6 +14,10 @@ export interface Certificate {
   email: string;
   phone: string;
   address: string;
+  // Revocation fields (optional)
+  revocationTxHash?: string;
+  revocationBlockNumber?: number;
+  revokedAt?: string;
 }
 
 export interface Verification {
@@ -48,7 +52,8 @@ class DatabaseService {
     const { blockchain } = await import("./blockchain");
     this.fileStorage = fileStorage;
     await this.fileStorage.initializeSampleData();
-    // Initialize blockchain records only once to prevent data loss
+
+    // Initialize blockchain records to ensure verification works
     blockchain.initializeSampleRecords();
   }
 
