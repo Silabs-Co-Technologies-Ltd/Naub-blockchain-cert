@@ -16,6 +16,13 @@ if (!fs.existsSync(DATA_DIR)) {
 
 class FileStorage {
   private static instance: FileStorage;
+  private inMemoryStorage: {
+    certificates: Record<string, Certificate>;
+    verifications: Verification[];
+  } = {
+    certificates: {},
+    verifications: [],
+  };
 
   private constructor() {}
 
@@ -91,13 +98,18 @@ class FileStorage {
   private async getCertificates(): Promise<Record<string, Certificate>> {
     try {
       if (!fs.existsSync(CERTIFICATES_FILE)) {
-        return {};
+        return this.inMemoryStorage.certificates;
       }
       const data = fs.readFileSync(CERTIFICATES_FILE, "utf8");
-      return JSON.parse(data);
+      const fileData = JSON.parse(data);
+      // Merge with in-memory storage (in-memory takes precedence)
+      return { ...fileData, ...this.inMemoryStorage.certificates };
     } catch (error) {
-      console.error("[FileStorage] Error reading certificates:", error);
-      return {};
+      console.error(
+        "[FileStorage] Error reading certificates, using in-memory:",
+        error
+      );
+      return this.inMemoryStorage.certificates;
     }
   }
 
@@ -109,21 +121,30 @@ class FileStorage {
         CERTIFICATES_FILE,
         JSON.stringify(certificates, null, 2)
       );
+      console.log("[FileStorage] Certificates saved to file successfully");
     } catch (error) {
-      console.error("[FileStorage] Error saving certificates:", error);
+      console.error("[FileStorage] Error saving certificates to file:", error);
+      console.log("[FileStorage] Saving to in-memory storage instead");
     }
+    // Always update in-memory storage as backup
+    this.inMemoryStorage.certificates = { ...certificates };
   }
 
   private async getVerificationsData(): Promise<Verification[]> {
     try {
       if (!fs.existsSync(VERIFICATIONS_FILE)) {
-        return [];
+        return this.inMemoryStorage.verifications;
       }
       const data = fs.readFileSync(VERIFICATIONS_FILE, "utf8");
-      return JSON.parse(data);
+      const fileData = JSON.parse(data);
+      // Merge with in-memory storage (in-memory takes precedence)
+      return [...fileData, ...this.inMemoryStorage.verifications];
     } catch (error) {
-      console.error("[FileStorage] Error reading verifications:", error);
-      return [];
+      console.error(
+        "[FileStorage] Error reading verifications, using in-memory:",
+        error
+      );
+      return this.inMemoryStorage.verifications;
     }
   }
 
@@ -135,9 +156,13 @@ class FileStorage {
         VERIFICATIONS_FILE,
         JSON.stringify(verifications, null, 2)
       );
+      console.log("[FileStorage] Verifications saved to file successfully");
     } catch (error) {
-      console.error("[FileStorage] Error saving verifications:", error);
+      console.error("[FileStorage] Error saving verifications to file:", error);
+      console.log("[FileStorage] Saving to in-memory storage instead");
     }
+    // Always update in-memory storage as backup
+    this.inMemoryStorage.verifications = [...verifications];
   }
 
   // Initialize with sample data
@@ -182,8 +207,15 @@ class FileStorage {
 
     if (!hasSampleData) {
       console.log("[FileStorage] Initializing sample data");
+      // Initialize in-memory storage with sample data
       for (const cert of sampleCerts) {
-        await this.createCertificate(cert);
+        this.inMemoryStorage.certificates[cert.id] = cert;
+      }
+      // Try to save to file, but don't fail if it doesn't work
+      try {
+        await this.saveCertificates(this.inMemoryStorage.certificates);
+      } catch (error) {
+        console.log("[FileStorage] Sample data initialized in memory only");
       }
     }
   }

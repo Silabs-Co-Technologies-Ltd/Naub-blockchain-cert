@@ -55,16 +55,25 @@ export default function CertificateDetailPage() {
 
   const loadCertificate = async () => {
     try {
+      console.log(`[Certificate Page] Loading certificate: ${params.id}`);
       const response = await fetch(`/api/certificates/${params.id}`);
       if (response.ok) {
         const data = await response.json();
+        console.log(`[Certificate Page] Certificate loaded:`, data);
         setCertificate(data);
       } else {
         console.error(
-          "[v0] Failed to load certificate:",
+          "[Certificate Page] Failed to load certificate:",
           response.status,
           response.statusText
         );
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[Certificate Page] Error details:", errorData);
+        toast({
+          title: "Certificate Not Found",
+          description: `Certificate ${params.id} could not be found`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("[v0] Error loading certificate:", error);
