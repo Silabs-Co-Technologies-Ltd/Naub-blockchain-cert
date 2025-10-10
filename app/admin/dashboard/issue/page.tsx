@@ -1,24 +1,36 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Shield, Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { certificateCategories } from "@/lib/certificate-utils"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Shield, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { certificateCategories } from "@/lib/certificate-utils";
 
 export default function IssueCertificatePage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     companyName: "",
     category: "",
@@ -26,48 +38,51 @@ export default function IssueCertificatePage() {
     phone: "",
     address: "",
     validityYears: "1",
-  })
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
       const response = await fetch("/api/certificates/issue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
         toast({
           title: "Certificate Issued Successfully",
           description: `Certificate ID: ${data.certificate.id}`,
-        })
-        router.push(`/admin/dashboard/certificate/${data.certificate.id}`)
+        });
+        // Small delay to ensure database operations complete
+        setTimeout(() => {
+          router.push(`/admin/dashboard/certificate/${data.certificate.id}`);
+        }, 1000);
       } else {
         toast({
           title: "Error",
           description: data.error || "Failed to issue certificate",
           variant: "destructive",
-        })
+        });
       }
     } catch (error) {
       toast({
         title: "Error",
         description: "An error occurred while issuing the certificate",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,7 +98,9 @@ export default function IssueCertificatePage() {
             <Shield className="h-8 w-8 text-primary" />
             <div>
               <h1 className="font-bold text-xl">Issue New Certificate</h1>
-              <p className="text-xs text-muted-foreground">Register and certify IT service provider</p>
+              <p className="text-xs text-muted-foreground">
+                Register and certify IT service provider
+              </p>
             </div>
           </div>
         </div>
@@ -93,7 +110,10 @@ export default function IssueCertificatePage() {
         <Card>
           <CardHeader>
             <CardTitle>Certificate Details</CardTitle>
-            <CardDescription>Enter the vendor information to generate a blockchain-secured certificate</CardDescription>
+            <CardDescription>
+              Enter the vendor information to generate a blockchain-secured
+              certificate
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -109,7 +129,9 @@ export default function IssueCertificatePage() {
                     id="companyName"
                     placeholder="e.g., TechVision Solutions Ltd"
                     value={formData.companyName}
-                    onChange={(e) => handleChange("companyName", e.target.value)}
+                    onChange={(e) =>
+                      handleChange("companyName", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -118,7 +140,11 @@ export default function IssueCertificatePage() {
                   <Label htmlFor="category">
                     Service Category <span className="text-destructive">*</span>
                   </Label>
-                  <Select value={formData.category} onValueChange={(value) => handleChange("category", value)} required>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => handleChange("category", value)}
+                    required
+                  >
                     <SelectTrigger id="category">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -185,7 +211,9 @@ export default function IssueCertificatePage() {
                   </Label>
                   <Select
                     value={formData.validityYears}
-                    onValueChange={(value) => handleChange("validityYears", value)}
+                    onValueChange={(value) =>
+                      handleChange("validityYears", value)
+                    }
                     required
                   >
                     <SelectTrigger id="validityYears">
@@ -204,8 +232,10 @@ export default function IssueCertificatePage() {
               {/* Blockchain Notice */}
               <div className="bg-muted p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Upon submission, this certificate will be cryptographically hashed and recorded
-                  on the blockchain. This process ensures the certificate is tamper-proof and permanently verifiable.
+                  <strong>Note:</strong> Upon submission, this certificate will
+                  be cryptographically hashed and recorded on the blockchain.
+                  This process ensures the certificate is tamper-proof and
+                  permanently verifiable.
                 </p>
               </div>
 
@@ -222,7 +252,11 @@ export default function IssueCertificatePage() {
                   )}
                 </Button>
                 <Link href="/admin/dashboard" className="flex-1">
-                  <Button type="button" variant="outline" className="w-full bg-transparent">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-transparent"
+                  >
                     Cancel
                   </Button>
                 </Link>
@@ -232,5 +266,5 @@ export default function IssueCertificatePage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

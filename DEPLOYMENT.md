@@ -9,6 +9,8 @@ The certificate issuing functionality has been fixed to work both locally and on
 1. **Blockchain Integration**: The system now gracefully handles missing blockchain wallet configuration
 2. **Error Handling**: Improved error messages and fallback mechanisms
 3. **Simulation Mode**: When blockchain wallet is not configured, the system uses simulation mode
+4. **Serverless Storage**: Fixed certificate storage for serverless platforms (Vercel, Netlify) using in-memory fallback
+5. **Certificate Issuing**: Resolved 404 errors when viewing issued certificates
 
 ### Environment Variables (Optional)
 
@@ -40,6 +42,15 @@ Set the environment variables in your platform's configuration.
 
 - **With Wallet**: Real blockchain transactions are recorded
 - **Without Wallet**: Simulation mode with generated transaction hashes
-- **Database**: Always saves to file-based storage (works in all environments)
+- **Database**: Hybrid storage system:
+  - **Local Development**: File-based storage
+  - **Serverless Deployment**: In-memory storage (data persists during function execution)
+  - **Fallback**: Always maintains data in memory as backup
 
-The system is now robust and will work regardless of blockchain configuration.
+### Important Notes for Production
+
+- **Data Persistence**: On serverless platforms, data is stored in memory and will reset when functions restart
+- **For Production**: Consider integrating with a database service (PostgreSQL, MongoDB) for persistent storage
+- **Current Solution**: Works perfectly for demos and development, certificates persist during the session
+
+The system is now robust and will work regardless of blockchain configuration or deployment platform.

@@ -43,5 +43,19 @@
     "revocationTxHash": "0xc59e98ed6427bf380730a3013016a138f9f8c8c8ef4e858c9f424752b3f631e2",
     "revocationBlockNumber": 27495925,
     "revokedAt": "2025-10-09T22:38:20.304Z"
+  },
+  "NITDA-2025-196968845": {
+    "id": "NITDA-2025-196968845",
+    "companyName": "Tekkd Solutions limited nigeria",
+    "category": "Software Development",
+    "dateIssued": "2025-10-10",
+    "dateExpiry": "2026-10-10",
+    "status": "valid",
+    "blockchainHash": "0x55b0ae8b54fd402d9924699aa9f5003cfa9775e809215cddf18bfbd0ac759b0c",
+    "transactionHash": "0x901d75252d7e1568cc9f27430684785bfc3b0b307c9af48980bae431bec9054c",
+    "blockNumber": 27515277,
+    "email": "tomiwakukoyiweb@gmail.com",
+    "phone": "+817083325053",
+    "address": "sss"
   }
 }

@@ -84,7 +84,9 @@ export async function POST(request: Request) {
       address,
     };
 
+    console.log(`[API] Saving certificate to database:`, certificate);
     await database.createCertificate(certificate);
+    console.log(`[API] Certificate saved to database`);
 
     // Verify the certificate was created
     const createdCert = await database.getCertificate(certificateId);
@@ -93,6 +95,18 @@ export async function POST(request: Request) {
         createdCert ? "Yes" : "No"
       }`
     );
+
+    if (!createdCert) {
+      console.error(
+        `[API] CRITICAL: Certificate ${certificateId} was not found after creation!`
+      );
+      // Try to get all certificates to debug
+      const allCerts = await database.getAllCertificates();
+      console.log(
+        `[API] All certificates after creation:`,
+        allCerts.map((c) => c.id)
+      );
+    }
 
     return NextResponse.json({ success: true, certificate });
   } catch (error) {
