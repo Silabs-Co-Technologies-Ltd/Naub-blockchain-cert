@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,20 @@ import {
   AlertCircle,
   ExternalLink,
   QrCode,
+  Bot,
+  Send,
+  X,
+  MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
 import type { Certificate } from "@/lib/database";
 import { QRScanner } from "@/components/qr-scanner";
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();
@@ -40,6 +50,13 @@ export default function VerifyPage() {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
+  // Chatbot state
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const id = searchParams.get("id");
     if (id) {
@@ -48,12 +65,20 @@ export default function VerifyPage() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages]);
+
   const verifyById = async (id: string) => {
     setIsSearching(true);
     setError(null);
     setHasSearched(true);
     setCertificate(null);
     setBlockchainInfo(null);
+    setShowChatbot(false);
+    setChatMessages([]);
 
     try {
       const response = await fetch(`/api/verify/${id}`);
@@ -63,10 +88,8 @@ export default function VerifyPage() {
         setCertificate(data.certificate);
         setBlockchainInfo(data.blockchain);
 
-        // Generate AI summary for the verified certificate
         generateAISummary(data.certificate);
 
-        // Log verification
         await fetch("/api/verify/log", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -102,8 +125,6 @@ export default function VerifyPage() {
       if (response.ok) {
         const data = await response.json();
         setAiSummary(data.summary);
-      } else {
-        console.error("Failed to generate AI summary");
       }
     } catch (error) {
       console.error("Error generating AI summary:", error);
@@ -113,53 +134,33 @@ export default function VerifyPage() {
   };
 
   const parseMultilingualSummary = (summary: string) => {
-    // Split the summary into language sections
     const englishMatch = summary.match(/ENGLISH:\s*([^]*?)(?=YORUBA:|$)/);
     const yorubaMatch = summary.match(/YORUBA:\s*([^]*?)(?=HAUSA:|$)/);
     const hausaMatch = summary.match(/HAUSA:\s*([^]*?)$/);
 
-    // Check if any section appears incomplete (truncated)
     const isIncomplete = (text: string) => {
       return (
         text.trim().endsWith("...") ||
         text.trim().length < 20 ||
         text.trim().endsWith("Wannan takardar shaid")
-      ); // Specific case from user's example
+      );
     };
 
     const sections = [];
 
     if (englishMatch) {
       const text = englishMatch[1].trim();
-      sections.push({
-        language: "English",
-        text: text,
-        flag: "🇬🇧",
-        incomplete: isIncomplete(text),
-      });
+      sections.push({ language: "English", text, flag: "🇬🇧", incomplete: isIncomplete(text) });
     }
-
     if (yorubaMatch) {
       const text = yorubaMatch[1].trim();
-      sections.push({
-        language: "Yoruba",
-        text: text,
-        flag: "🇳🇬",
-        incomplete: isIncomplete(text),
-      });
+      sections.push({ language: "Yoruba", text, flag: "🇳🇬", incomplete: isIncomplete(text) });
     }
-
     if (hausaMatch) {
       const text = hausaMatch[1].trim();
-      sections.push({
-        language: "Hausa",
-        text: text,
-        flag: "🇳🇬",
-        incomplete: isIncomplete(text),
-      });
+      sections.push({ language: "Hausa", text, flag: "🇳🇬", incomplete: isIncomplete(text) });
     }
 
-    // If no language sections found, display as single text
     if (sections.length === 0) {
       return <p className="leading-relaxed">{summary}</p>;
     }
@@ -196,7 +197,6 @@ export default function VerifyPage() {
 
   const handleQRScan = (data: string) => {
     setShowScanner(false);
-    // Extract certificate ID from URL or use data directly
     try {
       const url = new URL(data);
       const id = url.searchParams.get("id");
@@ -205,9 +205,75 @@ export default function VerifyPage() {
         verifyById(id);
       }
     } catch {
-      // If not a URL, treat as certificate ID
       setCertificateId(data);
       verifyById(data);
+    }
+  };
+
+  const handleOpenChatbot = () => {
+    setShowChatbot(true);
+    if (chatMessages.length === 0) {
+      setChatMessages([
+        {
+          role: "assistant",
+          content: `Hi! I'm NITDA's renewal assistant. I can help you understand how to renew the certificate for ${certificate?.companyName}. What would you like to know?`,
+        },
+      ]);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !certificate || isChatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput("");
+
+    const newMessages: ChatMessage[] = [
+      ...chatMessages,
+      { role: "user", content: userMessage },
+    ];
+    setChatMessages(newMessages);
+    setIsChatLoading(true);
+
+    try {
+      const res = await fetch("/api/ai/renewal-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage,
+          certificate,
+          history: chatMessages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages([
+          ...newMessages,
+          { role: "assistant", content: data.reply },
+        ]);
+      } else {
+        setChatMessages([
+          ...newMessages,
+          {
+            role: "assistant",
+            content:
+              "Sorry, I encountered an issue. Please contact support@nitda.gov.ng for renewal assistance.",
+          },
+        ]);
+      }
+    } catch {
+      setChatMessages([
+        ...newMessages,
+        {
+          role: "assistant",
+          content:
+            "Service temporarily unavailable. Please contact support@nitda.gov.ng.",
+        },
+      ]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -419,7 +485,6 @@ export default function VerifyPage() {
                       </div>
                     </div>
 
-                    {/* Original Certificate Transaction */}
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">
                         Issuance Transaction
@@ -441,7 +506,6 @@ export default function VerifyPage() {
                       </p>
                     </div>
 
-                    {/* Revocation Transaction (if revoked) */}
                     {certificate.status === "revoked" &&
                       certificate.revocationTxHash && (
                         <div className="border-t pt-4">
@@ -485,6 +549,118 @@ export default function VerifyPage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Renewal Chatbot — shown when certificate is expired or revoked */}
+                {(certificate.status === "expired" ||
+                  certificate.status === "revoked") && (
+                  <Card className="border-blue-200">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Bot className="h-5 w-5 text-primary" />
+                        Renewal Assistance
+                      </CardTitle>
+                      <CardDescription>
+                        {certificate.status === "expired"
+                          ? "This certificate has expired. Chat with our AI assistant to learn how to renew it."
+                          : "This certificate has been revoked. Chat with our AI assistant for guidance."}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {!showChatbot ? (
+                        <Button
+                          onClick={handleOpenChatbot}
+                          className="gap-2 w-full"
+                          variant="outline"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          Chat with Renewal Assistant
+                        </Button>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Chat Window */}
+                          <div className="h-72 overflow-y-auto border rounded-lg p-4 space-y-3 bg-muted/30">
+                            {chatMessages.map((msg, i) => (
+                              <div
+                                key={i}
+                                className={`flex gap-2 ${
+                                  msg.role === "user"
+                                    ? "justify-end"
+                                    : "justify-start"
+                                }`}
+                              >
+                                {msg.role === "assistant" && (
+                                  <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                                    <Bot className="h-4 w-4 text-primary" />
+                                  </div>
+                                )}
+                                <div
+                                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
+                                    msg.role === "user"
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-card border"
+                                  }`}
+                                >
+                                  {msg.content}
+                                </div>
+                              </div>
+                            ))}
+                            {isChatLoading && (
+                              <div className="flex gap-2 justify-start">
+                                <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <Bot className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="bg-card border rounded-lg px-3 py-2">
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                </div>
+                              </div>
+                            )}
+                            <div ref={chatEndRef} />
+                          </div>
+
+                          {/* Input */}
+                          <form
+                            onSubmit={handleSendMessage}
+                            className="flex gap-2"
+                          >
+                            <Input
+                              placeholder="Ask about renewal requirements, timelines, fees..."
+                              value={chatInput}
+                              onChange={(e) => setChatInput(e.target.value)}
+                              disabled={isChatLoading}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="submit"
+                              size="icon"
+                              disabled={isChatLoading || !chatInput.trim()}
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setShowChatbot(false)}
+                              title="Close chat"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </form>
+
+                          <p className="text-xs text-muted-foreground">
+                            For official guidance, contact{" "}
+                            <a
+                              href="mailto:support@nitda.gov.ng"
+                              className="underline"
+                            >
+                              support@nitda.gov.ng
+                            </a>
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             ) : error ? (
               <Card className="border-destructive">

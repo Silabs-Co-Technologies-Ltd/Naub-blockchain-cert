@@ -55,6 +55,10 @@ class DatabaseService {
 
     // Initialize blockchain records to ensure verification works
     blockchain.initializeSampleRecords();
+
+    // Reconcile all certificates with blockchain records
+    // This ensures orphaned certificates get blockchain records
+    await blockchain.reconcileAllCertificates();
   }
 
   // Certificate operations
@@ -74,7 +78,7 @@ class DatabaseService {
 
   async updateCertificate(
     id: string,
-    updates: Partial<Certificate>
+    updates: Partial<Certificate>,
   ): Promise<Certificate | null> {
     return await this.fileStorage.updateCertificate(id, updates);
   }

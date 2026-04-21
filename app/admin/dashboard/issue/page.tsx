@@ -23,14 +23,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Shield, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Shield,
+  Loader2,
+  Brain,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Sparkles,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { certificateCategories } from "@/lib/certificate-utils";
+import { Badge } from "@/components/ui/badge";
+
+interface ReviewResult {
+  riskLevel: "low" | "medium" | "high";
+  flags: string[];
+  recommendation: string;
+}
 
 export default function IssueCertificatePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null);
   const [formData, setFormData] = useState({
     companyName: "",
     category: "",
@@ -58,7 +76,6 @@ export default function IssueCertificatePage() {
           title: "Certificate Issued Successfully",
           description: `Certificate ID: ${data.certificate.id}`,
         });
-        // Small delay to ensure database operations complete
         setTimeout(() => {
           router.push(`/admin/dashboard/certificate/${data.certificate.id}`);
         }, 1000);
@@ -82,6 +99,76 @@ export default function IssueCertificatePage() {
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear review result when form changes
+    if (reviewResult) setReviewResult(null);
+  };
+
+  const handleReview = async () => {
+    if (
+      !formData.companyName ||
+      !formData.category ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.address
+    ) {
+      toast({
+        title: "Incomplete Form",
+        description: "Fill in all fields before running the AI review.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsReviewing(true);
+    setReviewResult(null);
+
+    try {
+      const res = await fetch("/api/ai/review-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setReviewResult(data);
+      } else {
+        toast({
+          title: "Review Failed",
+          description: "Could not complete AI review. You can still proceed.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Review Error",
+        description: "AI review service unavailable. You can still proceed.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
+  const riskConfig = {
+    low: {
+      icon: <CheckCircle className="h-5 w-5 text-green-600" />,
+      color: "bg-green-50 border-green-200 text-green-800",
+      badge: "bg-green-600",
+      label: "Low Risk",
+    },
+    medium: {
+      icon: <AlertTriangle className="h-5 w-5 text-yellow-600" />,
+      color: "bg-yellow-50 border-yellow-200 text-yellow-800",
+      badge: "bg-yellow-600",
+      label: "Medium Risk",
+    },
+    high: {
+      icon: <XCircle className="h-5 w-5 text-red-600" />,
+      color: "bg-red-50 border-red-200 text-red-800",
+      badge: "bg-red-600",
+      label: "High Risk",
+    },
   };
 
   return (
@@ -227,6 +314,79 @@ export default function IssueCertificatePage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* AI Review Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    AI Application Review
+                  </h3>
+                  <Badge variant="secondary" className="text-xs">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Gemini
+                  </Badge>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleReview}
+                  disabled={isReviewing}
+                  className="w-full gap-2"
+                >
+                  {isReviewing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Reviewing application...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="h-4 w-4" />
+                      Review Application with AI
+                    </>
+                  )}
+                </Button>
+
+                {reviewResult && (
+                  <div
+                    className={`p-4 rounded-lg border ${riskConfig[reviewResult.riskLevel].color}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {riskConfig[reviewResult.riskLevel].icon}
+                      <span className="font-semibold">
+                        {riskConfig[reviewResult.riskLevel].label}
+                      </span>
+                      <Badge
+                        className={`${riskConfig[reviewResult.riskLevel].badge} text-white text-xs ml-auto`}
+                      >
+                        {reviewResult.riskLevel.toUpperCase()}
+                      </Badge>
+                    </div>
+
+                    {reviewResult.flags.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium mb-1">
+                          Flags detected:
+                        </p>
+                        <ul className="text-sm space-y-1">
+                          {reviewResult.flags.map((flag, i) => (
+                            <li key={i} className="flex items-start gap-1">
+                              <span className="mt-1">•</span>
+                              <span>{flag}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <p className="text-sm">
+                      <span className="font-medium">Recommendation:</span>{" "}
+                      {reviewResult.recommendation}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Blockchain Notice */}

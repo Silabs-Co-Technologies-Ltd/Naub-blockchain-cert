@@ -21,12 +21,22 @@ import {
   Clock,
   Download,
   QrCode,
+  Brain,
+  Mail,
+  Copy,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
 import type { Certificate } from "@/lib/database";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeGenerator } from "@/components/qr-code-generator";
 import { CertificateDownload } from "@/components/certificate-download";
+
+interface RenewalNotice {
+  subject: string;
+  body: string;
+}
 
 export default function CertificateDetailPage() {
   const params = useParams();
@@ -36,6 +46,9 @@ export default function CertificateDetailPage() {
   const [isRevoking, setIsRevoking] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [isDraftingNotice, setIsDraftingNotice] = useState(false);
+  const [renewalNotice, setRenewalNotice] = useState<RenewalNotice | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -55,20 +68,13 @@ export default function CertificateDetailPage() {
 
   const loadCertificate = async () => {
     try {
-      console.log(`[Certificate Page] Loading certificate: ${params.id}`);
       const response = await fetch(`/api/certificates/${params.id}`);
       if (response.ok) {
         const data = await response.json();
-        console.log(`[Certificate Page] Certificate loaded:`, data);
         setCertificate(data);
       } else {
-        console.error(
-          "[Certificate Page] Failed to load certificate:",
-          response.status,
-          response.statusText
-        );
         const errorData = await response.json().catch(() => ({}));
-        console.error("[Certificate Page] Error details:", errorData);
+        console.error("[Certificate Page] Error:", errorData);
         toast({
           title: "Certificate Not Found",
           description: `Certificate ${params.id} could not be found`,
@@ -76,7 +82,7 @@ export default function CertificateDetailPage() {
         });
       }
     } catch (error) {
-      console.error("[v0] Error loading certificate:", error);
+      console.error("[Certificate Page] Error loading:", error);
     } finally {
       setIsLoading(false);
     }
@@ -132,6 +138,47 @@ export default function CertificateDetailPage() {
     }
   };
 
+  const handleDraftRenewalNotice = async () => {
+    if (!certificate) return;
+    setIsDraftingNotice(true);
+    setRenewalNotice(null);
+
+    try {
+      const res = await fetch("/api/admin/draft-renewal-notice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ certificate }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setRenewalNotice(data);
+      } else {
+        toast({
+          title: "Draft Failed",
+          description: "Could not draft the renewal notice. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Service unavailable. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDraftingNotice(false);
+    }
+  };
+
+  const handleCopyNotice = () => {
+    if (!renewalNotice) return;
+    navigator.clipboard.writeText(
+      `Subject: ${renewalNotice.subject}\n\n${renewalNotice.body}`
+    );
+    toast({ title: "Copied to clipboard" });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -166,6 +213,9 @@ export default function CertificateDetailPage() {
   const verificationUrl = `${
     typeof window !== "undefined" ? window.location.origin : ""
   }/verify?id=${certificate.id}`;
+
+  const needsRenewal =
+    certificate.status === "expired" || certificate.status === "revoked";
 
   return (
     <div className="min-h-screen bg-background">
@@ -314,7 +364,6 @@ export default function CertificateDetailPage() {
                 </p>
               </div>
 
-              {/* Original Certificate Transaction */}
               <div>
                 <p className="text-sm text-muted-foreground">
                   Issuance Transaction
@@ -336,7 +385,6 @@ export default function CertificateDetailPage() {
                 </p>
               </div>
 
-              {/* Revocation Transaction (if revoked) */}
               {certificate.status === "revoked" &&
                 certificate.revocationTxHash && (
                   <div className="border-t pt-4">
@@ -344,7 +392,7 @@ export default function CertificateDetailPage() {
                       Revocation Transaction
                     </p>
                     <div className="flex items-center gap-2">
-                      <p className="font-mono text-sm break-all bg-red-50  p-2 rounded flex-1 border border-red-200 dark:border-red-800">
+                      <p className="font-mono text-sm break-all bg-red-50 p-2 rounded flex-1 border border-red-200 dark:border-red-800">
                         {certificate.revocationTxHash}
                       </p>
                       <Button
@@ -402,6 +450,85 @@ export default function CertificateDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Renewal Notice — only for expired/revoked */}
+          {needsRenewal && (
+            <Card className="md:col-span-2 border-blue-200">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    AI Renewal Notice
+                    <Badge variant="secondary" className="text-xs">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Gemini
+                    </Badge>
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    onClick={handleDraftRenewalNotice}
+                    disabled={isDraftingNotice}
+                    className="gap-2"
+                  >
+                    {isDraftingNotice ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Drafting...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4" />
+                        Draft Renewal Notice
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <CardDescription>
+                  Generate an AI-drafted renewal notice email to send to{" "}
+                  {certificate.companyName}
+                </CardDescription>
+              </CardHeader>
+              {renewalNotice && (
+                <CardContent>
+                  <div className="space-y-4 bg-muted rounded-lg p-4">
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                        Subject
+                      </p>
+                      <p className="font-medium">{renewalNotice.subject}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                        Body
+                      </p>
+                      <pre className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                        {renewalNotice.body}
+                      </pre>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyNotice}
+                        className="gap-2"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy to Clipboard
+                      </Button>
+                      <a
+                        href={`mailto:${certificate.email}?subject=${encodeURIComponent(renewalNotice.subject)}&body=${encodeURIComponent(renewalNotice.body)}`}
+                      >
+                        <Button size="sm" className="gap-2">
+                          <Mail className="h-4 w-4" />
+                          Open in Email Client
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
         </div>
 
         {/* Actions */}
