@@ -1,4 +1,4 @@
-# NITDA Blockchain Certificate System
+# NITDA Blockchain Certificate System FULL DOCUMENTATION
 
 A blockchain-powered digital certificate system for IT service providers, built for the National Information Technology Development Agency (NITDA) of Nigeria.
 
