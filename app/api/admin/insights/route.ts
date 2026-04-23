@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { database } from "@/lib/database";
-import { GoogleGenAI } from "@google/genai";
+import { deepseekGenerate } from "@/lib/deepseek";
 
 export async function GET() {
   try {
@@ -36,19 +36,17 @@ export async function GET() {
     }).length;
 
     let insights: string[] = [];
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 
-    if (apiKey && apiKey !== "your_gemini_api_key_here") {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const categoryBreakdown = Object.entries(categoryCount)
-          .map(
-            ([cat, stats]) =>
-              `${cat}: ${stats.valid} valid, ${stats.expired} expired, ${stats.revoked} revoked`
-          )
-          .join("; ");
+    try {
+      const categoryBreakdown = Object.entries(categoryCount)
+        .map(
+          ([cat, stats]) =>
+            `${cat}: ${stats.valid} valid, ${stats.expired} expired, ${stats.revoked} revoked`
+        )
+        .join("; ");
 
-        const prompt = `Analyze this NITDA certificate system data and provide exactly 4 concise, specific, data-driven insights (one per line, no bullets or numbering, no formatting characters):
+      const text = await deepseekGenerate(
+        `Analyze this NITDA certificate system data and provide exactly 4 concise, specific, data-driven insights (one per line, no bullets or numbering, no formatting characters):
 
 Data:
 - Total certificates: ${total} (${valid} valid, ${expired} expired, ${revoked} revoked)
@@ -56,26 +54,19 @@ Data:
 - Verifications in last 7 days: ${recentVerifs}
 - Category breakdown: ${categoryBreakdown}
 
-Each insight must reference specific numbers from the data and suggest an action where applicable.`;
+Each insight must reference specific numbers from the data and suggest an action where applicable.`,
+        { temperature: 0.6, maxTokens: 300 }
+      );
 
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash-exp",
-          contents: prompt,
-          config: {
-            temperature: 0.6,
-            maxOutputTokens: 300,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        });
-        const text = response.text?.trim() || "";
+      if (text) {
         insights = text
           .split("\n")
           .map((l) => l.trim())
           .filter(Boolean)
           .slice(0, 4);
-      } catch {
-        insights = [];
       }
+    } catch {
+      insights = [];
     }
 
     if (insights.length === 0) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { database } from "@/lib/database";
-import { GoogleGenAI } from "@google/genai";
+import { deepseekGenerate } from "@/lib/deepseek";
 
 export async function GET() {
   try {
@@ -45,32 +45,20 @@ export async function GET() {
       .join(", ");
 
     let aiSummary: string | null = null;
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 
-    if (apiKey && apiKey !== "your_gemini_api_key_here") {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const prompt = `You are the NITDA certificate management AI. Write a concise executive summary (3-4 sentences) for the admin about the current certificate expiry situation:
+    try {
+      aiSummary = await deepseekGenerate(
+        `You are the NITDA certificate management AI. Write a concise executive summary (3-4 sentences) for the admin about the current certificate expiry situation:
 - ${critical.length} certificate(s) expiring within 7 days (CRITICAL)
 - ${warning.length} certificate(s) expiring within 8-30 days (WARNING)
 - ${alreadyExpired.length} certificate(s) already expired and awaiting renewal
 - Most affected categories: ${topCategories || "None"}
 
-End with 1-2 specific, actionable recommendations. Be direct and professional. No asterisks or special characters.`;
-
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash-exp",
-          contents: prompt,
-          config: {
-            temperature: 0.5,
-            maxOutputTokens: 200,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        });
-        aiSummary = response.text?.trim() || null;
-      } catch {
-        aiSummary = null;
-      }
+End with 1-2 specific, actionable recommendations. Be direct and professional. No asterisks or special characters.`,
+        { temperature: 0.5, maxTokens: 200 }
+      );
+    } catch {
+      aiSummary = null;
     }
 
     if (!aiSummary) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { database } from "@/lib/database";
-import { GoogleGenAI } from "@google/genai";
+import { deepseekGenerate } from "@/lib/deepseek";
 import type { Certificate } from "@/lib/database";
 
 export async function POST(req: Request) {
@@ -24,12 +24,9 @@ export async function POST(req: Request) {
     } = {};
     let explanation = `Showing results for: "${query}"`;
 
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-
-    if (apiKey && apiKey !== "your_gemini_api_key_here") {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const prompt = `Parse this natural language search query for a certificate management system into structured filters. Return ONLY valid JSON, no explanation, no markdown.
+    try {
+      const text = await deepseekGenerate(
+        `Parse this natural language search query for a certificate management system into structured filters. Return ONLY valid JSON, no explanation, no markdown.
 
 Query: "${query}"
 Today: ${today}
@@ -43,19 +40,11 @@ Return JSON in this exact shape:
   "expiryBefore": "YYYY-MM-DD" | null,
   "expiryAfter": "YYYY-MM-DD" | null,
   "explanation": "plain English description of what is being searched"
-}`;
+}`,
+        { temperature: 0.1, maxTokens: 200 }
+      );
 
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash-exp",
-          contents: prompt,
-          config: {
-            temperature: 0.1,
-            maxOutputTokens: 200,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        });
-
-        const text = response.text?.trim() || "{}";
+      if (text) {
         const jsonMatch = text.match(/\{[\s\S]+\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
@@ -68,9 +57,9 @@ Return JSON in this exact shape:
           };
           if (parsed.explanation) explanation = parsed.explanation;
         }
-      } catch {
-        // fall through to basic text search
       }
+    } catch {
+      // fall through to basic text search
     }
 
     let results: Certificate[] = [...certs];
@@ -108,7 +97,6 @@ Return JSON in this exact shape:
       filtersApplied = true;
     }
 
-    // Fallback: basic keyword search if no structured filters were applied
     if (!filtersApplied) {
       const q = query.toLowerCase();
       results = certs.filter(

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { deepseekChat, isDeepSeekConfigured } from "@/lib/deepseek";
+import type { DSMessage } from "@/lib/deepseek";
 
 export async function POST(req: Request) {
   try {
@@ -28,42 +29,25 @@ Guidelines:
 - Keep responses under 4 sentences unless more detail is clearly needed
 - Never make up specific fee amounts — direct to NITDA portal for exact figures`;
 
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-
-    if (!apiKey || apiKey === "your_gemini_api_key_here") {
+    if (!isDeepSeekConfigured()) {
       const reply = getTemplateReply(message, certificate);
       return NextResponse.json({ reply });
     }
 
-    const contents: Array<{
-      role: "user" | "model";
-      parts: Array<{ text: string }>;
-    }> = [];
+    const messages: DSMessage[] = [{ role: "system", content: systemPrompt }];
 
     if (Array.isArray(history)) {
       history.forEach((h: { role: string; content: string }) => {
-        contents.push({
-          role: h.role === "user" ? "user" : "model",
-          parts: [{ text: h.content }],
+        messages.push({
+          role: h.role === "user" ? "user" : "assistant",
+          content: h.content,
         });
       });
     }
-    contents.push({ role: "user", parts: [{ text: message }] });
-
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      contents,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.7,
-        maxOutputTokens: 250,
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    });
+    messages.push({ role: "user", content: message });
 
     const reply =
-      response.text?.trim() ||
+      (await deepseekChat(messages, { temperature: 0.7, maxTokens: 250 })) ??
       "I apologize, I could not generate a response. Please contact support@nitda.gov.ng for assistance.";
 
     return NextResponse.json({ reply });
@@ -82,19 +66,15 @@ function getTemplateReply(message: string, certificate: any): string {
   if (lower.includes("document") || lower.includes("required") || lower.includes("need") || lower.includes("submit")) {
     return `For ${certificate.category} renewal, you will typically need: an updated CAC registration certificate, evidence of continued operations in the ${certificate.category} sector, a completed NITDA renewal application form, and your most recent tax clearance certificate. Contact support@nitda.gov.ng to confirm the exact list for your category.`;
   }
-
   if (lower.includes("how long") || lower.includes("time") || lower.includes("duration") || lower.includes("process")) {
     return "The renewal process typically takes 2–4 weeks from submission of complete documentation. Submit all required documents together to avoid delays in processing.";
   }
-
   if (lower.includes("fee") || lower.includes("cost") || lower.includes("price") || lower.includes("pay")) {
     return `Renewal fees vary by service category. Visit the NITDA portal or contact support@nitda.gov.ng for the current fee schedule applicable to ${certificate.category} services.`;
   }
-
   if (lower.includes("start") || lower.includes("begin") || lower.includes("apply") || lower.includes("steps")) {
     return `To begin renewal: (1) Gather the required documents for ${certificate.category} services, (2) Visit the NITDA Vendor Portal or regional office, (3) Submit your completed renewal application with all documents, (4) Pay the applicable renewal fee. Contact support@nitda.gov.ng for assistance.`;
   }
-
   if (lower.includes("penalty") || lower.includes("fine") || lower.includes("late")) {
     return "Operating without a valid certificate may result in regulatory sanctions. We recommend initiating renewal immediately. Contact support@nitda.gov.ng to discuss your specific situation.";
   }

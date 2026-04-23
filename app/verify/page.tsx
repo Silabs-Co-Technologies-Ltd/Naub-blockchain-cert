@@ -28,15 +28,25 @@ import {
   X,
   MessageSquare,
   Loader2,
+  Globe,
 } from "lucide-react";
 import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
 import type { Certificate } from "@/lib/database";
 import { QRScanner } from "@/components/qr-scanner";
 
+type Language = "english" | "yoruba" | "hausa" | "igbo";
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+const LANGUAGE_LABELS: { key: Language; label: string }[] = [
+  { key: "english", label: "English" },
+  { key: "yoruba", label: "Yoruba" },
+  { key: "hausa", label: "Hausa" },
+  { key: "igbo", label: "Igbo" },
+];
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();
@@ -49,6 +59,7 @@ export default function VerifyPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [selectedLang, setSelectedLang] = useState<Language>("english");
 
   // Chatbot state
   const [showChatbot, setShowChatbot] = useState(false);
@@ -79,6 +90,8 @@ export default function VerifyPage() {
     setBlockchainInfo(null);
     setShowChatbot(false);
     setChatMessages([]);
+    setAiSummary(null);
+    setSelectedLang("english");
 
     try {
       const response = await fetch(`/api/verify/${id}`);
@@ -99,7 +112,7 @@ export default function VerifyPage() {
         const data = await response.json();
         setError(data.error || "Certificate not found");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred while verifying the certificate");
     } finally {
       setIsSearching(false);
@@ -126,73 +139,27 @@ export default function VerifyPage() {
         const data = await response.json();
         setAiSummary(data.summary);
       }
-    } catch (error) {
-      console.error("Error generating AI summary:", error);
+    } catch {
+      // silently fail
     } finally {
       setIsGeneratingSummary(false);
     }
   };
 
-  const parseMultilingualSummary = (summary: string) => {
-    const englishMatch = summary.match(/ENGLISH:\s*([^]*?)(?=YORUBA:|$)/);
-    const yorubaMatch = summary.match(/YORUBA:\s*([^]*?)(?=HAUSA:|$)/);
-    const hausaMatch = summary.match(/HAUSA:\s*([^]*?)$/);
-
-    const isIncomplete = (text: string) => {
-      return (
-        text.trim().endsWith("...") ||
-        text.trim().length < 20 ||
-        text.trim().endsWith("Wannan takardar shaid")
-      );
+  const parsedSummary = (summary: string): Record<Language, string> => {
+    const extract = (tag: string, nextTag: string | null) => {
+      const regex = nextTag
+        ? new RegExp(`${tag}:\\s*([\\s\\S]*?)(?=${nextTag}:|$)`)
+        : new RegExp(`${tag}:\\s*([\\s\\S]*?)$`);
+      return summary.match(regex)?.[1]?.trim() || "";
     };
 
-    const sections = [];
-
-    if (englishMatch) {
-      const text = englishMatch[1].trim();
-      sections.push({ language: "English", text, flag: "🇬🇧", incomplete: isIncomplete(text) });
-    }
-    if (yorubaMatch) {
-      const text = yorubaMatch[1].trim();
-      sections.push({ language: "Yoruba", text, flag: "🇳🇬", incomplete: isIncomplete(text) });
-    }
-    if (hausaMatch) {
-      const text = hausaMatch[1].trim();
-      sections.push({ language: "Hausa", text, flag: "🇳🇬", incomplete: isIncomplete(text) });
-    }
-
-    if (sections.length === 0) {
-      return <p className="leading-relaxed">{summary}</p>;
-    }
-
-    return (
-      <div className="space-y-4">
-        {sections.map((section, index) => (
-          <div key={index} className="border-l-4 border-blue-200 pl-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">{section.flag}</span>
-              <h4 className="font-semibold text-sm uppercase tracking-wide">
-                {section.language}
-              </h4>
-              {section.incomplete && (
-                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                  Incomplete Response
-                </span>
-              )}
-            </div>
-            <p className="leading-relaxed text-sm">
-              {section.text}
-              {section.incomplete && (
-                <span className="text-yellow-600 font-medium">
-                  {" "}
-                  [Response appears to be cut off]
-                </span>
-              )}
-            </p>
-          </div>
-        ))}
-      </div>
-    );
+    return {
+      english: extract("ENGLISH", "YORUBA"),
+      yoruba: extract("YORUBA", "HAUSA"),
+      hausa: extract("HAUSA", "IGBO"),
+      igbo: extract("IGBO", null),
+    };
   };
 
   const handleQRScan = (data: string) => {
@@ -249,28 +216,17 @@ export default function VerifyPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setChatMessages([
-          ...newMessages,
-          { role: "assistant", content: data.reply },
-        ]);
+        setChatMessages([...newMessages, { role: "assistant", content: data.reply }]);
       } else {
         setChatMessages([
           ...newMessages,
-          {
-            role: "assistant",
-            content:
-              "Sorry, I encountered an issue. Please contact support@nitda.gov.ng for renewal assistance.",
-          },
+          { role: "assistant", content: "Sorry, I encountered an issue. Please contact support@nitda.gov.ng for renewal assistance." },
         ]);
       }
     } catch {
       setChatMessages([
         ...newMessages,
-        {
-          role: "assistant",
-          content:
-            "Service temporarily unavailable. Please contact support@nitda.gov.ng.",
-        },
+        { role: "assistant", content: "Service temporarily unavailable. Please contact support@nitda.gov.ng." },
       ]);
     } finally {
       setIsChatLoading(false);
@@ -286,9 +242,7 @@ export default function VerifyPage() {
             <Shield className="h-8 w-8 text-primary" />
             <div>
               <h1 className="font-bold text-xl">NITDA</h1>
-              <p className="text-xs text-muted-foreground">
-                Certificate Verification
-              </p>
+              <p className="text-xs text-muted-foreground">Certificate Verification</p>
             </div>
           </Link>
           <Link href="/admin">
@@ -300,9 +254,7 @@ export default function VerifyPage() {
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Search Section */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4 text-balance">
-            Verify Certificate
-          </h2>
+          <h2 className="text-4xl font-bold mb-4 text-balance">Verify Certificate</h2>
           <p className="text-lg text-muted-foreground text-balance">
             Enter a certificate ID to verify its authenticity on the blockchain
           </p>
@@ -344,54 +296,7 @@ export default function VerifyPage() {
           <>
             {certificate ? (
               <div className="space-y-6">
-                {/* AI Verification Summary */}
-                {(aiSummary || isGeneratingSummary) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-primary" />
-                        AI Verification Summary
-                      </CardTitle>
-                      <CardDescription>
-                        Automated analysis of certificate authenticity
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {isGeneratingSummary ? (
-                        <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                          <p className="text-muted-foreground">
-                            Generating AI summary...
-                          </p>
-                        </div>
-                      ) : aiSummary ? (
-                        <div
-                          className={`p-4 rounded-lg border ${
-                            certificate.status === "valid"
-                              ? "bg-green-50 border-green-200"
-                              : certificate.status === "expired"
-                              ? "bg-yellow-50 border-yellow-200"
-                              : "bg-red-50 border-red-200"
-                          }`}
-                        >
-                          <div
-                            className={`space-y-4 ${
-                              certificate.status === "valid"
-                                ? "text-green-800"
-                                : certificate.status === "expired"
-                                ? "text-yellow-800"
-                                : "text-red-800"
-                            }`}
-                          >
-                            {parseMultilingualSummary(aiSummary)}
-                          </div>
-                        </div>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Certificate Details */}
+                {/* 1. Certificate Details */}
                 <div className="grid md:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
@@ -399,23 +304,15 @@ export default function VerifyPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Company Name
-                        </p>
-                        <p className="font-semibold text-lg">
-                          {certificate.companyName}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Company Name</p>
+                        <p className="font-semibold text-lg">{certificate.companyName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Service Category
-                        </p>
+                        <p className="text-sm text-muted-foreground">Service Category</p>
                         <p className="font-semibold">{certificate.category}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Location
-                        </p>
+                        <p className="text-sm text-muted-foreground">Location</p>
                         <p className="font-semibold">{certificate.address}</p>
                       </div>
                     </CardContent>
@@ -427,122 +324,81 @@ export default function VerifyPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Certificate ID
-                        </p>
-                        <p className="font-mono font-semibold">
-                          {certificate.id}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Certificate ID</p>
+                        <p className="font-mono font-semibold">{certificate.id}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Status</p>
-                        <Badge
-                          className={getCertificateStatusColor(
-                            certificate.status
-                          )}
-                        >
+                        <Badge className={getCertificateStatusColor(certificate.status)}>
                           {certificate.status}
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Issue Date
-                        </p>
-                        <p className="font-semibold">
-                          {formatDate(certificate.dateIssued)}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Issue Date</p>
+                        <p className="font-semibold">{formatDate(certificate.dateIssued)}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Expiry Date
-                        </p>
-                        <p className="font-semibold">
-                          {formatDate(certificate.dateExpiry)}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Expiry Date</p>
+                        <p className="font-semibold">{formatDate(certificate.dateExpiry)}</p>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Blockchain Verification */}
+                {/* 2. Blockchain Verification */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Shield className="h-5 w-5 text-primary" />
                       Blockchain Verification
                     </CardTitle>
-                    <CardDescription>
-                      Cryptographic proof of authenticity
-                    </CardDescription>
+                    <CardDescription>Cryptographic proof of authenticity</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Certificate Hash
-                      </p>
+                      <p className="text-sm text-muted-foreground mb-2">Certificate Hash</p>
                       <div className="bg-muted p-3 rounded font-mono text-sm break-all">
                         {certificate.blockchainHash}
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Issuance Transaction
-                      </p>
+                      <p className="text-sm text-muted-foreground mb-2">Issuance Transaction</p>
                       <div className="flex items-center gap-2">
                         <div className="bg-muted p-3 rounded font-mono text-sm break-all flex-1">
                           {certificate.transactionHash}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          title="View on blockchain explorer"
-                        >
+                        <Button variant="outline" size="icon" title="View on blockchain explorer">
                           <ExternalLink className="h-4 w-4" />
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Block: {certificate.blockNumber}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Block: {certificate.blockNumber}</p>
                     </div>
 
-                    {certificate.status === "revoked" &&
-                      certificate.revocationTxHash && (
-                        <div className="border-t pt-4">
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Revocation Transaction
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <div className="bg-red-50 p-3 rounded font-mono text-sm break-all flex-1 border border-red-200 dark:border-red-800">
-                              {certificate.revocationTxHash}
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              title="View revocation on blockchain explorer"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
+                    {certificate.status === "revoked" && certificate.revocationTxHash && (
+                      <div className="border-t pt-4">
+                        <p className="text-sm text-muted-foreground mb-2">Revocation Transaction</p>
+                        <div className="flex items-center gap-2">
+                          <div className="bg-red-50 p-3 rounded font-mono text-sm break-all flex-1 border border-red-200">
+                            {certificate.revocationTxHash}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Block: {certificate.revocationBlockNumber}
-                          </p>
-                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            Revoked:{" "}
-                            {new Date(certificate.revokedAt!).toLocaleString()}
-                          </p>
+                          <Button variant="outline" size="icon" title="View revocation on blockchain explorer">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
                         </div>
-                      )}
+                        <p className="text-xs text-muted-foreground mt-1">Block: {certificate.revocationBlockNumber}</p>
+                        <p className="text-xs text-red-600 mt-1">
+                          Revoked: {new Date(certificate.revokedAt!).toLocaleString()}
+                        </p>
+                      </div>
+                    )}
 
                     <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
                       <p className="text-sm text-primary">
-                        <strong>Verified:</strong> This certificate's hash has
-                        been verified on the blockchain and matches the official
-                        NITDA records.
+                        <strong>Verified:</strong> This certificate's hash has been verified on the blockchain and matches the official NITDA records.
                         {certificate.status === "revoked" && (
-                          <span className="block mt-2 text-red-600 dark:text-red-400">
-                            <strong>Revoked:</strong> This certificate has been
-                            permanently revoked and recorded on the blockchain.
+                          <span className="block mt-2 text-red-600">
+                            <strong>Revoked:</strong> This certificate has been permanently revoked and recorded on the blockchain.
                           </span>
                         )}
                       </p>
@@ -550,9 +406,8 @@ export default function VerifyPage() {
                   </CardContent>
                 </Card>
 
-                {/* Renewal Chatbot — shown when certificate is expired or revoked */}
-                {(certificate.status === "expired" ||
-                  certificate.status === "revoked") && (
+                {/* 3. Renewal Chatbot (expired or revoked only) */}
+                {(certificate.status === "expired" || certificate.status === "revoked") && (
                   <Card className="border-blue-200">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -567,26 +422,17 @@ export default function VerifyPage() {
                     </CardHeader>
                     <CardContent>
                       {!showChatbot ? (
-                        <Button
-                          onClick={handleOpenChatbot}
-                          className="gap-2 w-full"
-                          variant="outline"
-                        >
+                        <Button onClick={handleOpenChatbot} className="gap-2 w-full" variant="outline">
                           <MessageSquare className="h-4 w-4" />
                           Chat with Renewal Assistant
                         </Button>
                       ) : (
                         <div className="space-y-4">
-                          {/* Chat Window */}
                           <div className="h-72 overflow-y-auto border rounded-lg p-4 space-y-3 bg-muted/30">
                             {chatMessages.map((msg, i) => (
                               <div
                                 key={i}
-                                className={`flex gap-2 ${
-                                  msg.role === "user"
-                                    ? "justify-end"
-                                    : "justify-start"
-                                }`}
+                                className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                               >
                                 {msg.role === "assistant" && (
                                   <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
@@ -617,11 +463,7 @@ export default function VerifyPage() {
                             <div ref={chatEndRef} />
                           </div>
 
-                          {/* Input */}
-                          <form
-                            onSubmit={handleSendMessage}
-                            className="flex gap-2"
-                          >
+                          <form onSubmit={handleSendMessage} className="flex gap-2">
                             <Input
                               placeholder="Ask about renewal requirements, timelines, fees..."
                               value={chatInput}
@@ -629,11 +471,7 @@ export default function VerifyPage() {
                               disabled={isChatLoading}
                               className="flex-1"
                             />
-                            <Button
-                              type="submit"
-                              size="icon"
-                              disabled={isChatLoading || !chatInput.trim()}
-                            >
+                            <Button type="submit" size="icon" disabled={isChatLoading || !chatInput.trim()}>
                               <Send className="h-4 w-4" />
                             </Button>
                             <Button
@@ -649,10 +487,7 @@ export default function VerifyPage() {
 
                           <p className="text-xs text-muted-foreground">
                             For official guidance, contact{" "}
-                            <a
-                              href="mailto:support@nitda.gov.ng"
-                              className="underline"
-                            >
+                            <a href="mailto:support@nitda.gov.ng" className="underline">
                               support@nitda.gov.ng
                             </a>
                           </p>
@@ -661,19 +496,72 @@ export default function VerifyPage() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* 4. AI Multilingual Summary — last section, with language tabs */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-primary" />
+                      AI Verification Summary
+                    </CardTitle>
+                    <CardDescription>
+                      Automated certificate analysis — available in 4 languages
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Language tab buttons */}
+                    <div className="flex gap-1 mb-4 flex-wrap">
+                      {LANGUAGE_LABELS.map(({ key, label }) => (
+                        <button
+                          key={key}
+                          onClick={() => setSelectedLang(key)}
+                          className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                            selectedLang === key
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Content */}
+                    {isGeneratingSummary ? (
+                      <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                        <p className="text-muted-foreground">Generating multilingual summary...</p>
+                      </div>
+                    ) : aiSummary ? (
+                      <div
+                        className={`p-4 rounded-lg border ${
+                          certificate.status === "valid"
+                            ? "bg-green-50 border-green-200 text-green-800"
+                            : certificate.status === "expired"
+                              ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+                              : "bg-red-50 border-red-200 text-red-800"
+                        }`}
+                      >
+                        <p className="text-sm leading-relaxed">
+                          {parsedSummary(aiSummary)[selectedLang] ||
+                            "Translation not available. Please select another language."}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Summary unavailable.</p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             ) : error ? (
               <Card className="border-destructive">
                 <CardContent className="pt-6">
                   <div className="text-center py-8">
                     <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-                    <h3 className="text-xl font-bold mb-2">
-                      Certificate Not Found
-                    </h3>
+                    <h3 className="text-xl font-bold mb-2">Certificate Not Found</h3>
                     <p className="text-muted-foreground mb-4">{error}</p>
                     <p className="text-sm text-muted-foreground">
-                      Please check the certificate ID and try again. If you
-                      believe this is an error, contact NITDA.
+                      Please check the certificate ID and try again. If you believe this is an error, contact NITDA.
                     </p>
                   </div>
                 </CardContent>
@@ -682,7 +570,7 @@ export default function VerifyPage() {
           </>
         )}
 
-        {/* Info Section */}
+        {/* Info Section (shown before any search) */}
         {!hasSearched && (
           <div className="grid md:grid-cols-3 gap-6 mt-12">
             <Card>
@@ -692,8 +580,7 @@ export default function VerifyPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Every certificate is cryptographically secured and recorded on
-                  the blockchain for permanent verification.
+                  Every certificate is cryptographically secured and recorded on the blockchain for permanent verification.
                 </p>
               </CardContent>
             </Card>
@@ -705,8 +592,7 @@ export default function VerifyPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Verify any certificate in seconds with real-time blockchain
-                  validation and status checking.
+                  Verify any certificate in seconds with real-time blockchain validation and status checking.
                 </p>
               </CardContent>
             </Card>
@@ -718,8 +604,7 @@ export default function VerifyPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Certificates cannot be forged or altered, ensuring complete
-                  trust in vendor credentials.
+                  Certificates cannot be forged or altered, ensuring complete trust in vendor credentials.
                 </p>
               </CardContent>
             </Card>
@@ -728,21 +613,13 @@ export default function VerifyPage() {
       </div>
 
       {showScanner && (
-        <QRScanner
-          onScan={handleQRScan}
-          onClose={() => setShowScanner(false)}
-        />
+        <QRScanner onScan={handleQRScan} onClose={() => setShowScanner(false)} />
       )}
 
-      {/* Footer */}
       <footer className="border-t mt-20">
         <div className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
-          <p>
-            © 2025 National Information Technology Development Agency (NITDA)
-          </p>
-          <p className="mt-2">
-            For support or inquiries, contact support@nitda.gov.ng
-          </p>
+          <p>© 2025 National Information Technology Development Agency (NITDA)</p>
+          <p className="mt-2">For support or inquiries, contact support@nitda.gov.ng</p>
         </div>
       </footer>
     </div>

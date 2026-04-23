@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { deepseekGenerate } from "@/lib/deepseek";
 
 export async function POST(req: Request) {
   try {
@@ -46,12 +46,9 @@ Regards,
 Certificate Management Division
 National Information Technology Development Agency (NITDA)`;
 
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-
-    if (apiKey && apiKey !== "your_gemini_api_key_here") {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const prompt = `Draft a professional, formal certificate renewal notice email from NITDA (National Information Technology Development Agency of Nigeria) to an IT service provider.
+    try {
+      const text = await deepseekGenerate(
+        `Draft a professional, formal certificate renewal notice email from NITDA (National Information Technology Development Agency of Nigeria) to an IT service provider.
 
 Certificate Details:
 - Company: ${certificate.companyName}
@@ -72,27 +69,18 @@ Requirements:
 Format your response exactly as:
 SUBJECT: [subject line]
 BODY:
-[full email body]`;
+[full email body]`,
+        { temperature: 0.4, maxTokens: 500 }
+      );
 
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash-exp",
-          contents: prompt,
-          config: {
-            temperature: 0.4,
-            maxOutputTokens: 500,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        });
-
-        const text = response.text?.trim() || "";
+      if (text) {
         const subjectMatch = text.match(/SUBJECT:\s*(.+)/);
         const bodyMatch = text.match(/BODY:\s*([\s\S]+)/);
-
         if (subjectMatch) subject = subjectMatch[1].trim();
         if (bodyMatch) body = bodyMatch[1].trim();
-      } catch {
-        // use fallback template
       }
+    } catch {
+      // use fallback template
     }
 
     return NextResponse.json({ subject, body });

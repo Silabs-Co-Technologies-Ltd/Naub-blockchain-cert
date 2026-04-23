@@ -30,6 +30,11 @@ import {
   RefreshCw,
   Mail,
   Zap,
+  Globe,
+  Send,
+  CheckCircle,
+  Radio,
+  ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Certificate } from "@/lib/database";
@@ -66,11 +71,32 @@ interface Anomaly {
   detail: string;
 }
 
+interface SecuritySummary {
+  totalSearches: number;
+  uniqueIps: number;
+  suspiciousCount: number;
+}
+
+interface EmailResult {
+  sent: number;
+  drafts: number;
+  failed: number;
+  emailConfigured: boolean;
+  results: Array<{
+    certificateId: string;
+    companyName: string;
+    email: string;
+    daysLeft: number;
+    status: "sent" | "draft" | "failed";
+    subject: string;
+  }>;
+  message: string;
+}
+
 export default function AdminDashboard() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
   // AI state
@@ -79,10 +105,9 @@ export default function AdminDashboard() {
   const [expiryData, setExpiryData] = useState<ExpiryData | null>(null);
   const [isLoadingExpiry, setIsLoadingExpiry] = useState(false);
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
-  const [isNLSearch, setIsNLSearch] = useState(false);
-  const [nlResults, setNlResults] = useState<Certificate[] | null>(null);
-  const [nlExplanation, setNlExplanation] = useState("");
-  const [isNLSearching, setIsNLSearching] = useState(false);
+  const [securitySummary, setSecuritySummary] = useState<SecuritySummary | null>(null);
+  const [isSendingEmails, setIsSendingEmails] = useState(false);
+  const [emailResult, setEmailResult] = useState<EmailResult | null>(null);
 
   useEffect(() => {
     loadData();
@@ -114,6 +139,7 @@ export default function AdminDashboard() {
     loadInsights();
     loadExpiryAlerts();
     loadAnomalies();
+    loadSecuritySummary();
   };
 
   const loadInsights = async () => {
@@ -158,46 +184,40 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleNLSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setIsNLSearching(true);
+  const loadSecuritySummary = async () => {
     try {
-      const res = await fetch("/api/admin/nl-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery }),
-      });
+      const res = await fetch("/api/admin/search-activity");
       if (res.ok) {
         const data = await res.json();
-        setNlResults(data.results || []);
-        setNlExplanation(data.explanation || "");
+        setSecuritySummary({
+          totalSearches: data.totalSearches,
+          uniqueIps: data.uniqueIps,
+          suspiciousCount: data.suspiciousCount,
+        });
+      }
+    } catch {
+      // silently fail
+    }
+  };
+
+  const handleSendExpiryEmails = async () => {
+    setIsSendingEmails(true);
+    setEmailResult(null);
+    try {
+      const res = await fetch("/api/admin/send-expiry-emails", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setEmailResult(data);
       }
     } catch {
       // silently fail
     } finally {
-      setIsNLSearching(false);
+      setIsSendingEmails(false);
     }
   };
 
   const handleLogout = () => {
     router.push("/admin");
-  };
-
-  const filteredCertificates = certificates.filter(
-    (cert) =>
-      cert.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cert.companyName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const displayedCertificates =
-    isNLSearch && nlResults !== null ? nlResults : filteredCertificates;
-
-  const severityColor = (severity: Anomaly["severity"]) => {
-    if (severity === "high") return "text-red-600 bg-red-50 border-red-200";
-    if (severity === "medium")
-      return "text-yellow-600 bg-yellow-50 border-yellow-200";
-    return "text-blue-600 bg-blue-50 border-blue-200";
   };
 
   if (isLoading) {
@@ -313,7 +333,7 @@ export default function AdminDashboard() {
                   className="text-xs font-normal ml-1"
                 >
                   <Sparkles className="h-3 w-3 mr-1" />
-                  Gemini
+                  DeepSeek
                 </Badge>
               </CardTitle>
               <Button
@@ -405,7 +425,7 @@ export default function AdminDashboard() {
         {/* Expiry Alerts */}
         <Card className="mb-8">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-yellow-600" />
                 Certificate Renewal Queue
@@ -415,21 +435,36 @@ export default function AdminDashboard() {
                   </Badge>
                 )}
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={loadExpiryAlerts}
-                disabled={isLoadingExpiry}
-                className="gap-2"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isLoadingExpiry ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={loadExpiryAlerts}
+                  disabled={isLoadingExpiry}
+                  className="gap-2"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoadingExpiry ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSendExpiryEmails}
+                  disabled={isSendingEmails}
+                  className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isSendingEmails ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {isSendingEmails ? "Sending..." : "Send Renewal Emails"}
+                </Button>
+              </div>
             </div>
             <CardDescription>
-              AI-monitored expiry tracking with renewal recommendations
+              AI-monitored expiry tracking with renewal recommendations. Use DeepSeek AI to auto-send renewal notices.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -558,206 +593,188 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Security Anomalies */}
-        {anomalies.length > 0 && (
-          <Card className="mb-8 border-orange-200">
+        {/* Email Send Result */}
+        {emailResult && (
+          <Card className={`mb-8 border-${emailResult.emailConfigured ? (emailResult.failed > 0 ? "red" : "green") : "blue"}-200`}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-700">
-                <AlertTriangle className="h-5 w-5" />
-                Security Monitoring
-                <Badge className="bg-orange-600 text-white ml-1">
-                  {anomalies.length} alert{anomalies.length > 1 ? "s" : ""}
-                </Badge>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                {emailResult.emailConfigured ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <Mail className="h-5 w-5 text-blue-600" />
+                )}
+                {emailResult.message}
               </CardTitle>
-              <CardDescription>
-                AI-detected suspicious verification patterns
-              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {anomalies.map((anomaly, i) => (
-                  <div
-                    key={i}
-                    className={`p-3 rounded-lg border ${severityColor(anomaly.severity)}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
+            {emailResult.results.length > 0 && (
+              <CardContent>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {emailResult.results.map((r) => (
+                    <div key={r.certificateId} className="flex items-center justify-between text-sm border rounded px-3 py-2">
                       <div>
-                        <p className="font-semibold text-sm">{anomaly.type}</p>
-                        <p className="text-sm mt-0.5">{anomaly.description}</p>
-                        <p className="text-xs mt-1 opacity-75">
-                          {anomaly.detail}
-                        </p>
+                        <span className="font-medium">{r.companyName}</span>
+                        <span className="text-muted-foreground ml-2">→ {r.email}</span>
                       </div>
-                      <Badge
-                        className={`text-xs flex-shrink-0 ${
-                          anomaly.severity === "high"
-                            ? "bg-red-600 text-white"
-                            : anomaly.severity === "medium"
-                              ? "bg-yellow-600 text-white"
-                              : "bg-blue-600 text-white"
-                        }`}
-                      >
-                        {anomaly.severity}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {r.daysLeft <= 0 ? `${Math.abs(r.daysLeft)}d expired` : `${r.daysLeft}d left`}
+                        </span>
+                        <Badge className={
+                          r.status === "sent" ? "bg-green-600 text-white" :
+                          r.status === "draft" ? "bg-blue-600 text-white" :
+                          "bg-red-600 text-white"
+                        }>
+                          {r.status}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
+                  ))}
+                </div>
+                {!emailResult.emailConfigured && (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    To enable actual sending, configure EMAIL_HOST, EMAIL_USER, EMAIL_PASSWORD in your .env.local file.
+                  </p>
+                )}
+              </CardContent>
+            )}
           </Card>
         )}
 
-        {/* Certificates Management */}
-        <Card>
+        {/* Security Monitor Summary */}
+        <Card className={`mb-8 ${((securitySummary?.suspiciousCount ?? 0) + anomalies.length) > 0 ? "border-red-300" : ""}`}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Certificate Management</CardTitle>
-                <CardDescription>
-                  View and manage all issued certificates
-                </CardDescription>
-              </div>
-              <Link href="/admin/dashboard/issue">
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Issue Certificate
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-red-600" />
+                Security Monitor
+                {((securitySummary?.suspiciousCount ?? 0) + anomalies.length) > 0 && (
+                  <Badge className="bg-red-600 text-white ml-1 gap-1">
+                    <Radio className="h-3 w-3" />
+                    {(securitySummary?.suspiciousCount ?? 0) + anomalies.length} alert{((securitySummary?.suspiciousCount ?? 0) + anomalies.length) > 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </CardTitle>
+              <Link href="/admin/dashboard/security">
+                <Button variant="outline" size="sm" className="gap-2">
+                  Full Security Dashboard
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </Link>
             </div>
+            <CardDescription>IP tracking, threat detection, and verification anomaly alerts</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Search with NL Toggle */}
-            <div className="mb-6">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  {isNLSearch ? (
-                    <Bot className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                  ) : (
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  )}
-                  <form onSubmit={isNLSearch ? handleNLSearch : (e) => e.preventDefault()}>
-                    <input
-                      type="text"
-                      placeholder={
-                        isNLSearch
-                          ? 'e.g. "expired cybersecurity certs" or "valid ISP providers"'
-                          : "Search by certificate ID or company name..."
-                      }
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        if (!isNLSearch) setNlResults(null);
-                      }}
-                    />
-                  </form>
-                </div>
-                <Button
-                  type="button"
-                  variant={isNLSearch ? "default" : "outline"}
-                  className="gap-2 shrink-0"
-                  onClick={() => {
-                    setIsNLSearch(!isNLSearch);
-                    setNlResults(null);
-                    setNlExplanation("");
-                    setSearchQuery("");
-                  }}
-                  title="Toggle AI natural language search"
-                >
-                  <Brain className="h-4 w-4" />
-                  AI Search
-                </Button>
-                {isNLSearch && (
-                  <Button
-                    type="button"
-                    onClick={handleNLSearch}
-                    disabled={isNLSearching || !searchQuery.trim()}
-                    className="gap-2 shrink-0"
-                  >
-                    {isNLSearching ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                    Search
-                  </Button>
-                )}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold">{securitySummary?.totalSearches ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">Total Verifications</p>
               </div>
-              {isNLSearch && nlExplanation && (
-                <div className="mt-2 flex items-center gap-2 text-sm text-primary">
-                  <Sparkles className="h-3 w-3" />
-                  <span>{nlExplanation}</span>
-                  <span className="text-muted-foreground">
-                    — {nlResults?.length ?? 0} result(s)
-                  </span>
-                </div>
-              )}
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold">{securitySummary?.uniqueIps ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">Unique IPs (24h)</p>
+              </div>
+              <div className={`text-center p-3 rounded-lg ${((securitySummary?.suspiciousCount ?? 0) + anomalies.length) > 0 ? "bg-red-50 border border-red-200" : "bg-muted/50"}`}>
+                <p className={`text-2xl font-bold ${((securitySummary?.suspiciousCount ?? 0) + anomalies.length) > 0 ? "text-red-600" : ""}`}>
+                  {(securitySummary?.suspiciousCount ?? 0) + anomalies.length}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Active Alerts</p>
+              </div>
             </div>
+            {((securitySummary?.suspiciousCount ?? 0) + anomalies.length) > 0 ? (
+              <div className="flex items-center gap-2 text-sm text-red-600 font-medium">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                Suspicious activity detected — open the Security Dashboard to investigate.
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                No suspicious activity detected in the last 24 hours.
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-            {/* Certificates Table */}
+        {/* Recent Certificates */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle>Recent Certificates</CardTitle>
+                <CardDescription>5 most recently issued certificates</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Link href="/admin/dashboard/issue">
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Issue Certificate
+                  </Button>
+                </Link>
+                <Link href="/admin/dashboard/certificates">
+                  <Button variant="outline" className="gap-2">
+                    View All
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
             <div className="border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted">
                     <tr>
-                      <th className="text-left p-4 font-medium">
-                        Certificate ID
-                      </th>
-                      <th className="text-left p-4 font-medium">
-                        Company Name
-                      </th>
+                      <th className="text-left p-4 font-medium">Certificate ID</th>
+                      <th className="text-left p-4 font-medium">Company Name</th>
                       <th className="text-left p-4 font-medium">Category</th>
                       <th className="text-left p-4 font-medium">Issue Date</th>
-                      <th className="text-left p-4 font-medium">Expiry Date</th>
                       <th className="text-left p-4 font-medium">Status</th>
                       <th className="text-left p-4 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {displayedCertificates.map((cert) => (
-                      <tr key={cert.id} className="border-t hover:bg-muted/50">
-                        <td className="p-4 font-mono text-sm">{cert.id}</td>
-                        <td className="p-4">{cert.companyName}</td>
-                        <td className="p-4 text-sm text-muted-foreground">
-                          {cert.category}
-                        </td>
-                        <td className="p-4 text-sm">
-                          {formatDate(cert.dateIssued)}
-                        </td>
-                        <td className="p-4 text-sm">
-                          {formatDate(cert.dateExpiry)}
-                        </td>
-                        <td className="p-4">
-                          <Badge
-                            className={getCertificateStatusColor(cert.status)}
-                          >
-                            {cert.status}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <Link
-                            href={`/admin/dashboard/certificate/${cert.id}`}
-                          >
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                    {certificates
+                      .slice()
+                      .sort((a, b) => new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime())
+                      .slice(0, 5)
+                      .map((cert) => (
+                        <tr key={cert.id} className="border-t hover:bg-muted/50">
+                          <td className="p-4 font-mono text-sm">{cert.id}</td>
+                          <td className="p-4">{cert.companyName}</td>
+                          <td className="p-4 text-sm text-muted-foreground">{cert.category}</td>
+                          <td className="p-4 text-sm">{formatDate(cert.dateIssued)}</td>
+                          <td className="p-4">
+                            <Badge className={getCertificateStatusColor(cert.status)}>
+                              {cert.status}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            <Link href={`/admin/dashboard/certificate/${cert.id}`}>
+                              <Button variant="ghost" size="sm">View</Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {displayedCertificates.length === 0 && (
+            {certificates.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 <FileCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>
-                  {isNLSearch && nlResults !== null
-                    ? "No certificates match your AI search query"
-                    : "No certificates found"}
-                </p>
+                <p>No certificates issued yet.</p>
+              </div>
+            )}
+
+            {certificates.length > 5 && (
+              <div className="mt-4 text-center">
+                <Link href="/admin/dashboard/certificates">
+                  <Button variant="outline" className="gap-2">
+                    View all {certificates.length} certificates
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
             )}
           </CardContent>

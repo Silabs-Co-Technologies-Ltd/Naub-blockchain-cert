@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { deepseekGenerate } from "@/lib/deepseek";
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +17,6 @@ export async function POST(req: Request) {
     let recommendation =
       "Application looks good. Proceed with certificate issuance.";
 
-    // Basic local validation checks
     if (!email.includes("@") || !email.includes(".")) {
       flags.push("Email format appears invalid");
     }
@@ -35,12 +34,9 @@ export async function POST(req: Request) {
       flags.push("Free email provider detected — registered businesses typically use a corporate domain");
     }
 
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-
-    if (apiKey && apiKey !== "your_gemini_api_key_here") {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const prompt = `You are a risk assessment AI for NITDA (Nigeria's National Information Technology Development Agency). Review this IT service provider certificate application for potential red flags.
+    try {
+      const text = await deepseekGenerate(
+        `You are a risk assessment AI for NITDA (Nigeria's National Information Technology Development Agency). Review this IT service provider certificate application for potential red flags.
 
 Application Data:
 - Company Name: ${companyName}
@@ -59,19 +55,11 @@ Assess the following:
 Respond in this exact format (no extra text, no markdown):
 RISK: low|medium|high
 FLAGS: [comma-separated specific concerns, or "none"]
-RECOMMENDATION: [1-2 sentence recommendation for the admin]`;
+RECOMMENDATION: [1-2 sentence recommendation for the admin]`,
+        { temperature: 0.3, maxTokens: 200 }
+      );
 
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash-exp",
-          contents: prompt,
-          config: {
-            temperature: 0.3,
-            maxOutputTokens: 200,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        });
-
-        const text = response.text?.trim() || "";
+      if (text) {
         const riskMatch = text.match(/RISK:\s*(low|medium|high)/i);
         const flagsMatch = text.match(/FLAGS:\s*(.+)/i);
         const recMatch = text.match(/RECOMMENDATION:\s*([\s\S]+?)(?=\n[A-Z]+:|$)/i);
@@ -91,22 +79,14 @@ RECOMMENDATION: [1-2 sentence recommendation for the admin]`;
         if (recMatch) {
           recommendation = recMatch[1].trim();
         }
-      } catch {
-        if (flags.length > 0) {
-          riskLevel = "medium";
-          recommendation =
-            "Some issues detected. Review the flagged items before proceeding with certificate issuance.";
-        }
       }
-    } else {
+    } catch {
       if (flags.length >= 2) {
         riskLevel = "high";
-        recommendation =
-          "Multiple issues detected. Verify the application details before issuing this certificate.";
+        recommendation = "Multiple issues detected. Verify the application details before issuing this certificate.";
       } else if (flags.length === 1) {
         riskLevel = "medium";
-        recommendation =
-          "One issue detected. Review the flagged item before proceeding.";
+        recommendation = "One issue detected. Review the flagged item before proceeding.";
       }
     }
 
