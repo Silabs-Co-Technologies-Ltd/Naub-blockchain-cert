@@ -31,7 +31,7 @@ export function CertificateDownload({
             .certificate {
               max-width: 800px;
               margin: 0 auto;
-              border: 8px solid #279841;
+              border: 8px solid #6f2f1b;
               padding: 40px;
               background: white;
               box-shadow: 0 0 20px rgba(0,0,0,0.1);
@@ -39,13 +39,13 @@ export function CertificateDownload({
             .header {
               text-align: center;
               margin-bottom: 30px;
-              border-bottom: 3px solid #279841;
+              border-bottom: 3px solid #6f2f1b;
               padding-bottom: 20px;
             }
             .logo {
               font-size: 32px;
               font-weight: bold;
-              color: #279841;
+              color: #6f2f1b;
               margin-bottom: 10px;
             }
             .title {
@@ -69,7 +69,7 @@ export function CertificateDownload({
             }
             .field-label {
               font-weight: bold;
-              color: #279841;
+              color: #6f2f1b;
               width: 200px;
             }
             .field-value {
@@ -80,13 +80,13 @@ export function CertificateDownload({
               text-align: center;
               margin-top: 30px;
               padding-top: 20px;
-              border-top: 2px solid #279841;
+              border-top: 2px solid #6f2f1b;
             }
             .qr-code {
               margin: 20px auto;
               padding: 10px;
               background: white;
-              border: 2px solid #279841;
+              border: 2px solid #6f2f1b;
               display: inline-block;
             }
             .footer {
@@ -98,7 +98,7 @@ export function CertificateDownload({
             .status-badge {
               display: inline-block;
               padding: 5px 15px;
-              background: #279841;
+              background: #6f2f1b;
               color: white;
               border-radius: 20px;
               font-size: 14px;
@@ -106,14 +106,14 @@ export function CertificateDownload({
             }
             @media print {
               body { padding: 0; }
-              .certificate { border: 8px solid #279841; box-shadow: none; }
+              .certificate { border: 8px solid #6f2f1b; box-shadow: none; }
             }
           </style>
         </head>
         <body>
           <div class="certificate">
             <div class="header">
-              <div class="logo">🛡️ NAUB</div>
+              <div class="logo">NAUB</div>
               <div class="subtitle">Nigerian Army University Biu</div>
               <div class="title">Academic Certificate</div>
             </div>
@@ -128,12 +128,20 @@ export function CertificateDownload({
                 <div class="field-value">${certificate.companyName}</div>
               </div>
               <div class="field">
-                <div class="field-label">Programme / Department:</div>
+                <div class="field-label">Programme of Study:</div>
                 <div class="field-value">${certificate.category}</div>
               </div>
               <div class="field">
-                <div class="field-label">Email:</div>
-                <div class="field-value">${certificate.email}</div>
+                <div class="field-label">Matriculation No.:</div>
+                <div class="field-value">${certificate.matriculationNumber || "Not recorded"}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Class of Degree:</div>
+                <div class="field-value">${certificate.classOfDegree || "Not recorded"}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Certificate No.:</div>
+                <div class="field-value">${certificate.certificateNumber || certificate.id}</div>
               </div>
               <div class="field">
                 <div class="field-label">Phone:</div>
@@ -150,9 +158,9 @@ export function CertificateDownload({
                 ).toLocaleDateString()}</div>
               </div>
               <div class="field">
-                <div class="field-label">Expiry Date:</div>
+                <div class="field-label">Date of Award:</div>
                 <div class="field-value">${new Date(
-                  certificate.dateExpiry
+                  certificate.dateOfAward || certificate.dateIssued
                 ).toLocaleDateString()}</div>
               </div>
               <div class="field">
@@ -171,7 +179,7 @@ export function CertificateDownload({
               qrCodeDataUrl
                 ? `
             <div class="qr-section">
-              <h3 style="color: #279841; margin-bottom: 10px;">Verification QR Code</h3>
+              <h3 style="color: #6f2f1b; margin-bottom: 10px;">Verification QR Code</h3>
               <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
                 Scan this code to verify the certificate on the blockchain
               </p>
@@ -184,7 +192,7 @@ export function CertificateDownload({
             }
 
             <div class="footer">
-              <p><strong>This is an official certificate issued by NAUB</strong></p>
+              <p><strong>This is an official degree certificate record issued by Nigerian Army University Biu</strong></p>
               <p>Verified on blockchain - Transaction: ${
                 certificate.transactionHash
               }</p>

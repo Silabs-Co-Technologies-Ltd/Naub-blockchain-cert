@@ -307,8 +307,12 @@ export default function CertificateDetailPage() {
                 <p className="font-semibold">{certificate.phone}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Address</p>
-                <p className="font-semibold">{certificate.address}</p>
+                <p className="text-sm text-muted-foreground">Matriculation Number</p>
+                <p className="font-semibold">{certificate.matriculationNumber || "Not recorded"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Class of Degree</p>
+                <p className="font-semibold">{certificate.classOfDegree || "Not recorded"}</p>
               </div>
             </CardContent>
           </Card>
@@ -338,9 +342,9 @@ export default function CertificateDetailPage() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Expiry Date</p>
+                <p className="text-sm text-muted-foreground">Date of Award</p>
                 <p className="font-semibold">
-                  {formatDate(certificate.dateExpiry)}
+                  {formatDate(certificate.dateOfAward || certificate.dateIssued)}
                 </p>
               </div>
             </CardContent>

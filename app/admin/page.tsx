@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Lock, ArrowLeft } from "lucide-react";
+import { Lock, ArrowLeft, ShieldCheck } from "lucide-react";
+import { NaubBrand } from "@/components/naub-brand";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -77,14 +78,12 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Shield className="h-8 w-8 text-primary" />
-            </div>
+<NaubBrand title="NAUB Registry Portal" subtitle="Super Admin / Registry Admin access" />
           </div>
           <div>
-            <CardTitle className="text-2xl">NAUB Admin Portal</CardTitle>
+            <CardTitle className="text-2xl flex items-center justify-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Role-Based Access</CardTitle>
             <CardDescription>
-              Sign in to manage certificates and certificate holders
+              Sign in to issue, revoke, and monitor NAUB blockchain degree certificates
             </CardDescription>
           </div>
         </CardHeader>

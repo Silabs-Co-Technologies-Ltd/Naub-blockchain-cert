@@ -21,6 +21,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  FileText,
   ExternalLink,
   QrCode,
   Bot,
@@ -33,6 +34,7 @@ import {
 import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
 import type { Certificate } from "@/lib/database";
 import { QRScanner } from "@/components/qr-scanner";
+import { NaubBrand } from "@/components/naub-brand";
 
 type Language = "english" | "yoruba" | "hausa" | "igbo";
 
@@ -51,6 +53,7 @@ const LANGUAGE_LABELS: { key: Language; label: string }[] = [
 export default function VerifyPage() {
   const searchParams = useSearchParams();
   const [certificateId, setCertificateId] = useState("");
+  const [fieldHashNotice, setFieldHashNotice] = useState("");
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [blockchainInfo, setBlockchainInfo] = useState<any>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -121,7 +124,21 @@ export default function VerifyPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    verifyById(certificateId);
+    verifyById(certificateId.trim());
+  };
+
+  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const text = await file.text().catch(() => "");
+    const hashMatch = text.match(/[a-f0-9]{64}/i);
+    if (hashMatch) {
+      setCertificateId(hashMatch[0]);
+      verifyById(hashMatch[0]);
+      setFieldHashNotice("Extracted a 64-character SHA-256 hash from the uploaded certificate file.");
+    } else {
+      setFieldHashNotice("No embedded hash was found in this demo PDF/text upload. Paste the certificate hash or scan its QR code.");
+    }
   };
 
   const generateAISummary = async (cert: Certificate) => {
@@ -239,24 +256,21 @@ export default function VerifyPage() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="font-bold text-xl">NAUB</h1>
-              <p className="text-xs text-muted-foreground">Certificate Verification</p>
-            </div>
+            <NaubBrand subtitle="Public Certificate Verification" />
           </Link>
-          <Link href="/admin">
-            <Button variant="ghost">Admin Login</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/holder"><Button variant="ghost">Holder Portal</Button></Link>
+            <Link href="/admin"><Button variant="ghost">Admin Login</Button></Link>
+          </div>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Search Section */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4 text-balance">Verify Certificate</h2>
+          <h2 className="text-4xl font-bold mb-4 text-balance">Verify a NAUB Degree Certificate</h2>
           <p className="text-lg text-muted-foreground text-balance">
-            Enter a certificate ID to verify its authenticity on the blockchain
+            Submit a certificate hash, certificate number, field-derived hash, PDF-embedded hash, or QR code. No login, payment, or account is required.
           </p>
         </div>
 
@@ -265,7 +279,7 @@ export default function VerifyPage() {
             <form onSubmit={handleVerify} className="space-y-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter Certificate ID (e.g., NAUB-2024-001)"
+                  placeholder="Paste certificate hash, certificate number, or demo ID (e.g., NAUB-2024-001)"
                   value={certificateId}
                   onChange={(e) => setCertificateId(e.target.value)}
                   className="flex-1"
@@ -276,6 +290,18 @@ export default function VerifyPage() {
                   {isSearching ? "Verifying..." : "Verify"}
                 </Button>
               </div>
+              <div className="grid gap-3 rounded-lg border border-primary/10 bg-accent/40 p-4 md:grid-cols-4">
+                <div className="flex items-center gap-2 text-sm font-medium"><Search className="h-4 w-4 text-primary" /> Direct paste</div>
+                <div className="flex items-center gap-2 text-sm font-medium"><FileText className="h-4 w-4 text-primary" /> Field form hash</div>
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                  <FileText className="h-4 w-4 text-primary" /> PDF upload
+                  <input type="file" accept=".pdf,.txt,.html" onChange={handlePdfUpload} className="sr-only" />
+                </label>
+                <button type="button" onClick={() => setShowScanner(true)} className="flex items-center gap-2 text-sm font-medium text-left">
+                  <QrCode className="h-4 w-4 text-primary" /> QR scan
+                </button>
+              </div>
+              {fieldHashNotice && <p className="text-center text-sm text-muted-foreground">{fieldHashNotice}</p>}
               <div className="flex items-center justify-center">
                 <Button
                   type="button"
@@ -312,8 +338,12 @@ export default function VerifyPage() {
                         <p className="font-semibold">{certificate.category}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Location</p>
-                        <p className="font-semibold">{certificate.address}</p>
+                        <p className="text-sm text-muted-foreground">Matriculation Number</p>
+                        <p className="font-semibold">{certificate.matriculationNumber || "Not recorded"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Class of Degree</p>
+                        <p className="font-semibold">{certificate.classOfDegree || "Not recorded"}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -338,8 +368,8 @@ export default function VerifyPage() {
                         <p className="font-semibold">{formatDate(certificate.dateIssued)}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Expiry Date</p>
-                        <p className="font-semibold">{formatDate(certificate.dateExpiry)}</p>
+                        <p className="text-sm text-muted-foreground">Date of Award</p>
+                        <p className="font-semibold">{certificate.dateOfAward ? formatDate(certificate.dateOfAward) : formatDate(certificate.dateIssued)}</p>
                       </div>
                     </CardContent>
                   </Card>

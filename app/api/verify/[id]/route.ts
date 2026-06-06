@@ -11,7 +11,11 @@ export async function GET(
     console.log(`[Verify API] Verifying certificate: ${id}`);
     console.log(`[Verify API] Request URL: ${request.url}`);
 
-    const certificate = await database.getCertificate(id);
+    const normalizedHash = id.startsWith("0x") ? id : `0x${id}`;
+    const certificateById = await database.getCertificate(id);
+    const certificate = certificateById || (await database.getAllCertificates()).find(
+      (cert) => cert.blockchainHash === id || cert.blockchainHash === normalizedHash || cert.certificateNumber === id,
+    ) || null;
 
     if (!certificate) {
       console.log(`[Verify API] Certificate not found in database: ${id}`);
@@ -45,7 +49,7 @@ export async function GET(
     );
 
     // Prepare blockchain verification response
-    const blockchainResponse = {
+    const blockchainResponse: Record<string, unknown> = {
       status: "verified",
       txHash: blockchainRecord.transactionHash,
       blockNumber: blockchainRecord.blockNumber,
