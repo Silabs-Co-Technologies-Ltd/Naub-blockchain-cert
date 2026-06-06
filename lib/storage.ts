@@ -169,9 +169,9 @@ class FileStorage {
   async initializeSampleData(): Promise<void> {
     const sampleCerts: Certificate[] = [
       {
-        id: "NITDA-2024-001",
-        companyName: "TechVision Solutions Ltd",
-        category: "Software Development",
+        id: "NAUB-2024-001",
+        companyName: "Amina Yusuf",
+        category: "Computer Science",
         dateIssued: "2024-01-15",
         dateExpiry: "2025-01-15",
         status: "valid",
@@ -180,14 +180,14 @@ class FileStorage {
         transactionHash:
           "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
         blockNumber: 1234567,
-        email: "info@techvision.ng",
+        email: "amina.yusuf@naub.edu.ng",
         phone: "+234-801-234-5678",
-        address: "Lagos, Nigeria",
+        address: "Biu, Borno State, Nigeria",
       },
       {
-        id: "NITDA-2024-002",
-        companyName: "DataSecure Systems",
-        category: "Cybersecurity",
+        id: "NAUB-2024-002",
+        companyName: "Ibrahim Musa",
+        category: "Cyber Security",
         dateIssued: "2024-02-20",
         dateExpiry: "2025-02-20",
         status: "valid",
@@ -196,9 +196,9 @@ class FileStorage {
         transactionHash:
           "0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
         blockNumber: 1234890,
-        email: "contact@datasecure.ng",
+        email: "ibrahim.musa@naub.edu.ng",
         phone: "+234-802-345-6789",
-        address: "Abuja, Nigeria",
+        address: "Maiduguri, Borno State, Nigeria",
       },
     ];
 

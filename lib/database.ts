@@ -31,7 +31,7 @@ class DatabaseService {
   private static instance: DatabaseService;
   private fileStorage: any;
   private adminCredentials = {
-    username: "admin@nitda.gov.ng",
+    username: "admin@naub.edu.ng",
     password: "admin123", // In production, use proper hashing
   };
 

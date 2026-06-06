@@ -1,7 +1,7 @@
 {
-  "name": "nitda-blockchain-certificate-system",
+  "name": "naub-blockchain-certificate-system",
   "version": "1.0.0",
-  "description": "Blockchain-powered digital certificate system for IT service providers",
+  "description": "Blockchain-powered digital certificate system for NAUB graduates",
   "private": true,
   "scripts": {
     "build": "next build",

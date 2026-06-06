@@ -41,7 +41,7 @@ export default function AdminLoginPage() {
       if (response.ok) {
         toast({
           title: "Login Successful",
-          description: "Welcome to NITDA Admin Dashboard",
+          description: "Welcome to NAUB Admin Dashboard",
         });
         router.push("/admin/dashboard");
       } else {
@@ -82,9 +82,9 @@ export default function AdminLoginPage() {
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl">NITDA Admin Portal</CardTitle>
+            <CardTitle className="text-2xl">NAUB Admin Portal</CardTitle>
             <CardDescription>
-              Sign in to manage certificates and vendors
+              Sign in to manage certificates and certificate holders
             </CardDescription>
           </div>
         </CardHeader>
@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
               <Input
                 id="username"
                 type="email"
-                placeholder="admin@nitda.gov.ng"
+                placeholder="admin@naub.edu.ng"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -122,7 +122,7 @@ export default function AdminLoginPage() {
               Demo Credentials:
             </p>
             <p className="text-sm font-mono text-center mt-1">
-              admin@nitda.gov.ng / admin123
+              admin@naub.edu.ng / admin123
             </p>
           </div>
         </CardContent>

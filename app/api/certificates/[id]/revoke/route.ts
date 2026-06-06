@@ -27,7 +27,7 @@ export async function POST(
       certificateId: id,
       originalHash: certificate.blockchainHash,
       revokedAt: new Date().toISOString(),
-      reason: "Certificate revoked by NITDA",
+      reason: "Certificate revoked by NAUB",
     });
 
     console.log(`[Revoke API] Recording revocation on blockchain for: ${id}`);

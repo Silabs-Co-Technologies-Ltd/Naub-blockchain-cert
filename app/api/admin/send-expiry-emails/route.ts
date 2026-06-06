@@ -30,35 +30,35 @@ async function draftEmail(cert: {
         ? `expiring in ${cert.daysLeft} day(s) — URGENT`
         : `expiring in ${cert.daysLeft} day(s)`;
 
-  const defaultSubject = `NITDA Certificate Renewal Notice — ${cert.id}`;
+  const defaultSubject = `NAUB Certificate Lifecycle Notice — ${cert.id}`;
   const defaultBody = `Dear ${cert.companyName},
 
-This is an official reminder from NITDA that your IT service provider certificate (ID: ${cert.id}) for ${cert.category} services is ${urgency}.
+This is an official reminder from NAUB that your NAUB graduate certificate (ID: ${cert.id}) for the ${cert.category} programme is ${urgency}.
 
-Please log in to the NITDA Vendor Portal to initiate your renewal. Prepare the following documents:
-- Updated CAC registration
-- Tax clearance certificate
-- Evidence of continued ${cert.category} operations
-- Completed renewal form signed by authorised signatory
+Please log in to the NAUB Certificate Registry Portal to initiate certificate revalidation or registry support. Prepare the following documents:
+- Student identity confirmation
+- University clearance evidence
+- Evidence of continued ${cert.category} academic record
+- Completed registry request form
 
-For assistance contact support@nitda.gov.ng.
+For assistance contact support@naub.edu.ng.
 
 Regards,
 Certificate Management Division
-NITDA`;
+NAUB`;
 
   try {
     const text = await deepseekGenerate(
-      `Draft a concise, formal certificate renewal notice email from NITDA to an IT service provider.
+      `Draft a concise, formal certificate lifecycle notice email from NAUB to an NAUB graduate.
 
 Details:
-- Company: ${cert.companyName}
+- Holder: ${cert.companyName}
 - Certificate ID: ${cert.id}
-- Category: ${cert.category}
+- Programme: ${cert.category}
 - Status: ${urgency}
 - Email: ${cert.email}
 
-Rules: Nigerian government tone, no markdown or asterisks, include category-specific renewal steps, reference support@nitda.gov.ng.
+Rules: formal Nigerian university registry tone, no markdown or asterisks, include programme-specific registry support steps, reference support@naub.edu.ng.
 
 Format:
 SUBJECT: [subject]
@@ -173,7 +173,7 @@ export async function POST() {
       results,
       message: emailConfigured
         ? `${sent} email(s) sent, ${failed} failed.`
-        : `Email SMTP not configured. ${drafts} renewal notice(s) drafted — configure EMAIL_HOST, EMAIL_USER, EMAIL_PASSWORD in .env.local to enable sending.`,
+        : `Email SMTP not configured. ${drafts} certificate lifecycle notice(s) drafted — configure EMAIL_HOST, EMAIL_USER, EMAIL_PASSWORD in .env.local to enable sending.`,
     });
   } catch (error) {
     console.error("[Send Expiry Emails]", error);

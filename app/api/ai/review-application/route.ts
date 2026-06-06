@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     let riskLevel: "low" | "medium" | "high" = "low";
     const flags: string[] = [];
     let recommendation =
-      "Application looks good. Proceed with certificate issuance.";
+      "Record looks good. Proceed with certificate issuance after confirming registry approval.";
 
     if (!email.includes("@") || !email.includes(".")) {
       flags.push("Email format appears invalid");
@@ -25,37 +25,38 @@ export async function POST(req: Request) {
       flags.push("Phone number appears too short");
     }
     if (address.trim().split(/\s+/).length < 3) {
-      flags.push("Business address appears incomplete");
+      flags.push("Contact address appears incomplete");
     }
     if (companyName.trim().split(/\s+/).length < 2) {
-      flags.push("Company name appears incomplete — single word names are unusual for registered businesses");
+      flags.push("Holder name appears incomplete — use the full student or graduate name");
     }
-    if (email.split("@")[1]?.includes("gmail") || email.split("@")[1]?.includes("yahoo") || email.split("@")[1]?.includes("hotmail")) {
-      flags.push("Free email provider detected — registered businesses typically use a corporate domain");
+    const domain = email.split("@")[1]?.toLowerCase() ?? "";
+    if (["gmail", "yahoo", "hotmail", "outlook"].some((d) => domain.includes(d))) {
+      flags.push("Free email provider detected — confirm the holder against official NAUB records");
     }
 
     try {
       const text = await deepseekGenerate(
-        `You are a risk assessment AI for NITDA (Nigeria's National Information Technology Development Agency). Review this IT service provider certificate application for potential red flags.
+        `You are a registry risk assessment AI for Nigerian Army University Biu (NAUB). Review this academic certificate issuance request for possible inconsistencies.
 
 Application Data:
-- Company Name: ${companyName}
-- Service Category: ${category}
+- Student / Graduate Name: ${companyName}
+- Programme / Department: ${category}
 - Email: ${email}
 - Phone: ${phone}
-- Business Address: ${address}
+- Contact Address: ${address}
 
 Assess the following:
-1. Does the company name appear legitimate for a Nigerian ${category} provider?
-2. Does the email domain suggest a real business (not free email)?
-3. Is the phone number in valid Nigerian format (starts with +234 or 0, 11-13 digits)?
-4. Is the address sufficiently detailed for a Nigerian business location?
-5. Are there any inconsistencies between the fields?
+1. Does the holder name look complete enough for an academic certificate record?
+2. Does the programme/department look plausible for a university certificate?
+3. Does the email format look usable, and should the registry confirm it against institutional records?
+4. Is the phone number in a plausible Nigerian format?
+5. Is the address detailed enough for registry contact purposes?
 
 Respond in this exact format (no extra text, no markdown):
 RISK: low|medium|high
 FLAGS: [comma-separated specific concerns, or "none"]
-RECOMMENDATION: [1-2 sentence recommendation for the admin]`,
+RECOMMENDATION: [1-2 sentence recommendation for the registry admin]`,
         { temperature: 0.3, maxTokens: 200 }
       );
 
@@ -83,7 +84,7 @@ RECOMMENDATION: [1-2 sentence recommendation for the admin]`,
     } catch {
       if (flags.length >= 2) {
         riskLevel = "high";
-        recommendation = "Multiple issues detected. Verify the application details before issuing this certificate.";
+        recommendation = "Multiple issues detected. Verify the holder details against official registry records before issuing this certificate.";
       } else if (flags.length === 1) {
         riskLevel = "medium";
         recommendation = "One issue detected. Review the flagged item before proceeding.";
