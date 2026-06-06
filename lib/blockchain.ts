@@ -197,7 +197,12 @@ export class BlockchainService {
       )}...`,
     );
 
-    const certificateHash = this.generateHash(certificateData);
+    const normalizedInputHash = certificateData.match(/^(0x)?[a-f0-9]{64}$/i)
+      ? certificateData.startsWith("0x")
+        ? certificateData
+        : `0x${certificateData}`
+      : null;
+    const certificateHash = normalizedInputHash || this.generateHash(certificateData);
     console.log(`[Blockchain] Generated hash: ${certificateHash}`);
 
     // If wallet is available, use real blockchain

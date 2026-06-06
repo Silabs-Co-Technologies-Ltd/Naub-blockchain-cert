@@ -8,6 +8,16 @@ export interface Certificate {
   dateIssued: string;
   dateExpiry: string;
   status: "valid" | "expired" | "revoked";
+  matriculationNumber?: string;
+  dateOfBirth?: string;
+  classOfDegree?: string;
+  dateOfAward?: string;
+  certificateNumber?: string;
+  viceChancellor?: string;
+  holderIdentityHash?: string;
+  ipfsCid?: string;
+  institutionName?: string;
+  certificateType?: string;
   blockchainHash: string;
   transactionHash: string;
   blockNumber: number;

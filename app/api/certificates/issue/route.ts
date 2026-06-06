@@ -8,8 +8,25 @@ import crypto from "crypto";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { companyName, category, email, phone, address, validityYears } =
-      body;
+    const {
+      companyName,
+      category,
+      email,
+      phone,
+      address,
+      validityYears,
+      matriculationNumber,
+      dateOfBirth,
+      classOfDegree,
+      dateOfAward,
+      certificateNumber,
+      viceChancellor,
+      holderIdentityHash,
+      ipfsCid,
+      institutionName = "Nigerian Army University Biu",
+      certificateType = "Degree Certificate",
+      certificateHash,
+    } = body;
 
     // Validate required fields
     if (
@@ -18,7 +35,13 @@ export async function POST(request: Request) {
       !email ||
       !phone ||
       !address ||
-      !validityYears
+      !validityYears ||
+      !matriculationNumber ||
+      !dateOfBirth ||
+      !classOfDegree ||
+      !dateOfAward ||
+      !certificateNumber ||
+      !viceChancellor
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -41,7 +64,16 @@ export async function POST(request: Request) {
     const certificateData = JSON.stringify({
       id: certificateId,
       companyName,
+      matriculationNumber,
+      dateOfBirth,
       category,
+      classOfDegree,
+      dateOfAward,
+      certificateNumber,
+      viceChancellor,
+      institutionName,
+      certificateType,
+      ipfsCid: ipfsCid || `ipfs://demo-${certificateId}`,
       dateIssued,
       dateExpiry,
     });
@@ -49,7 +81,7 @@ export async function POST(request: Request) {
     // Write to blockchain
     let blockchainRecord;
     try {
-      blockchainRecord = await blockchain.writeCertificateHash(certificateData);
+      blockchainRecord = await blockchain.writeCertificateHash(certificateHash || certificateData);
       console.log(`[API] Blockchain result:`, blockchainRecord);
     } catch (blockchainError) {
       console.error(`[API] Blockchain error:`, blockchainError);
@@ -60,7 +92,7 @@ export async function POST(request: Request) {
           .substr(2, 9)}`,
         blockNumber: Math.floor(Math.random() * 1000000) + 1000000,
         timestamp: Date.now(),
-        certificateHash: crypto
+        certificateHash: certificateHash || crypto
           .createHash("sha256")
           .update(certificateData)
           .digest("hex"),
@@ -76,6 +108,16 @@ export async function POST(request: Request) {
       dateIssued,
       dateExpiry,
       status: "valid",
+      matriculationNumber,
+      dateOfBirth,
+      classOfDegree,
+      dateOfAward,
+      certificateNumber,
+      viceChancellor,
+      holderIdentityHash,
+      ipfsCid: ipfsCid || `ipfs://demo-${certificateId}`,
+      institutionName,
+      certificateType,
       blockchainHash: blockchainRecord.certificateHash,
       transactionHash: blockchainRecord.transactionHash,
       blockNumber: blockchainRecord.blockNumber,

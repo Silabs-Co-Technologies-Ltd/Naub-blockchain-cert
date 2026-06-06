@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -23,50 +22,104 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import {
+  canonicalCertificatePayload,
+  canonicalHolderPayload,
+  certificateCategories,
+  degreeClasses,
+} from "@/lib/certificate-utils";
+import { NaubBrand } from "@/components/naub-brand";
 import {
   ArrowLeft,
-  Shield,
-  Loader2,
-  Brain,
   CheckCircle,
-  AlertTriangle,
-  XCircle,
-  Sparkles,
+  Database,
+  FileKey2,
+  Loader2,
+  ShieldCheck,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { certificateCategories } from "@/lib/certificate-utils";
-import { Badge } from "@/components/ui/badge";
 
-interface ReviewResult {
-  riskLevel: "low" | "medium" | "high";
-  flags: string[];
-  recommendation: string;
+async function sha256Hex(payload: string) {
+  const bytes = new TextEncoder().encode(payload);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export default function IssueCertificatePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isReviewing, setIsReviewing] = useState(false);
-  const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null);
+  const [hashPreview, setHashPreview] = useState<{ certificateHash: string; holderIdentityHash: string } | null>(null);
   const [formData, setFormData] = useState({
     companyName: "",
+    matriculationNumber: "",
+    dateOfBirth: "",
     category: "",
+    classOfDegree: "",
+    dateOfAward: "",
+    certificateNumber: "",
+    viceChancellor: "",
     email: "",
     phone: "",
     address: "",
-    validityYears: "1",
+    ipfsCid: "",
   });
+
+  const requiredFields = [
+    formData.companyName,
+    formData.matriculationNumber,
+    formData.dateOfBirth,
+    formData.category,
+    formData.classOfDegree,
+    formData.dateOfAward,
+    formData.certificateNumber,
+    formData.viceChancellor,
+    formData.email,
+    formData.phone,
+    formData.address,
+  ];
+
+  const computeHashes = async () => {
+    const missingRequired = requiredFields.some((value) => !value.trim());
+    if (missingRequired) {
+      toast({
+        title: "Incomplete NAUB certificate fields",
+        description: "Complete every Chapter 3 required certificate field before hashing.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    const certificateHash = await sha256Hex(canonicalCertificatePayload(formData));
+    const holderIdentityHash = await sha256Hex(
+      canonicalHolderPayload(formData.companyName, formData.dateOfBirth),
+    );
+    const hashes = { certificateHash, holderIdentityHash };
+    setHashPreview(hashes);
+    return hashes;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      const hashes = await computeHashes();
+      if (!hashes) return;
+
       const response = await fetch("/api/certificates/issue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          ...hashes,
+          validityYears: "99",
+          certificateType: "Degree Certificate",
+          institutionName: "Nigerian Army University Biu",
+        }),
       });
 
       const data = await response.json();
@@ -74,19 +127,19 @@ export default function IssueCertificatePage() {
       if (response.ok) {
         toast({
           title: "Certificate Issued Successfully",
-          description: `Certificate ID: ${data.certificate.id}`,
+          description: `Certificate hash anchored for ${data.certificate.certificateNumber}`,
         });
         setTimeout(() => {
           router.push(`/admin/dashboard/certificate/${data.certificate.id}`);
         }, 1000);
       } else {
         toast({
-          title: "Error",
+          title: "Issuance Failed",
           description: data.error || "Failed to issue certificate",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "An error occurred while issuing the certificate",
@@ -99,331 +152,136 @@ export default function IssueCertificatePage() {
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear review result when form changes
-    if (reviewResult) setReviewResult(null);
-  };
-
-  const handleReview = async () => {
-    if (
-      !formData.companyName ||
-      !formData.category ||
-      !formData.email ||
-      !formData.phone ||
-      !formData.address
-    ) {
-      toast({
-        title: "Incomplete Form",
-        description: "Fill in all fields before running the AI review.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsReviewing(true);
-    setReviewResult(null);
-
-    try {
-      const res = await fetch("/api/ai/review-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setReviewResult(data);
-      } else {
-        toast({
-          title: "Review Failed",
-          description: "Could not complete AI review. You can still proceed.",
-          variant: "destructive",
-        });
-      }
-    } catch {
-      toast({
-        title: "Review Error",
-        description: "AI review service unavailable. You can still proceed.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsReviewing(false);
-    }
-  };
-
-  const riskConfig = {
-    low: {
-      icon: <CheckCircle className="h-5 w-5 text-green-600" />,
-      color: "bg-green-50 border-green-200 text-green-800",
-      badge: "bg-green-600",
-      label: "Low Risk",
-    },
-    medium: {
-      icon: <AlertTriangle className="h-5 w-5 text-yellow-600" />,
-      color: "bg-yellow-50 border-yellow-200 text-yellow-800",
-      badge: "bg-yellow-600",
-      label: "Medium Risk",
-    },
-    high: {
-      icon: <XCircle className="h-5 w-5 text-red-600" />,
-      color: "bg-red-50 border-red-200 text-red-800",
-      badge: "bg-red-600",
-      label: "High Risk",
-    },
+    setHashPreview(null);
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
+      <header className="sticky top-0 z-50 border-b border-primary/15 bg-card/95 backdrop-blur">
+        <div className="container mx-auto flex items-center gap-4 px-4 py-4">
           <Link href="/admin/dashboard">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Back to dashboard">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="font-bold text-xl">Issue New Certificate</h1>
-              <p className="text-xs text-muted-foreground">
-                Issue and anchor a NAUB academic certificate
-              </p>
-            </div>
-          </div>
+          <NaubBrand title="Issue New Certificate" subtitle="Registry Admin • Chapter 3 FR-05 to FR-09" />
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="container mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[1fr_340px]">
         <Card>
           <CardHeader>
-            <CardTitle>Certificate Details</CardTitle>
+            <CardTitle>NAUB Degree Certificate Details</CardTitle>
             <CardDescription>
-              Enter the certificate holder information to generate a blockchain-secured
-              certificate
+              Complete the academic fields specified in Chapter 3 before the browser computes the SHA-256 hashes and submits the registry transaction.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Student / Graduate Information */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Student / Graduate Information</h3>
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">
-                    Student / Graduate Name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="companyName"
-                    placeholder="e.g., Amina Yusuf"
-                    value={formData.companyName}
-                    onChange={(e) =>
-                      handleChange("companyName", e.target.value)
-                    }
-                    required
-                  />
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <section className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="companyName">Student / Graduate Full Name *</Label>
+                  <Input id="companyName" placeholder="e.g., Amina Yusuf" value={formData.companyName} onChange={(e) => handleChange("companyName", e.target.value)} required />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="category">
-                    Programme / Department <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => handleChange("category", value)}
-                    required
-                  >
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Select a programme or department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {certificateCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                  <Label htmlFor="matriculationNumber">Matriculation Number *</Label>
+                  <Input id="matriculationNumber" placeholder="NAUB/UG/2020/0001" value={formData.matriculationNumber} onChange={(e) => handleChange("matriculationNumber", e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                  <Input id="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={(e) => handleChange("dateOfBirth", e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Programme of Study *</Label>
+                  <Select value={formData.category} onValueChange={(value) => handleChange("category", value)} required>
+                    <SelectTrigger id="category"><SelectValue placeholder="Select programme" /></SelectTrigger>
+                    <SelectContent>{certificateCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="email">
-                    Email Address <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="student.name@naub.edu.ng"
-                    value={formData.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    Phone Number <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+234-XXX-XXX-XXXX"
-                    value={formData.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">
-                    Contact Address <span className="text-destructive">*</span>
-                  </Label>
-                  <Textarea
-                    id="address"
-                    placeholder="Enter student or alumni contact address"
-                    value={formData.address}
-                    onChange={(e) => handleChange("address", e.target.value)}
-                    required
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              {/* Certificate Validity */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Certificate Validity</h3>
-
-                <div className="space-y-2">
-                  <Label htmlFor="validityYears">
-                    Validity Period <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.validityYears}
-                    onValueChange={(value) =>
-                      handleChange("validityYears", value)
-                    }
-                    required
-                  >
-                    <SelectTrigger id="validityYears">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 Year</SelectItem>
-                      <SelectItem value="2">2 Years</SelectItem>
-                      <SelectItem value="3">3 Years</SelectItem>
-                      <SelectItem value="5">5 Years</SelectItem>
-                    </SelectContent>
+                  <Label htmlFor="classOfDegree">Class of Degree *</Label>
+                  <Select value={formData.classOfDegree} onValueChange={(value) => handleChange("classOfDegree", value)} required>
+                    <SelectTrigger id="classOfDegree"><SelectValue placeholder="Select class" /></SelectTrigger>
+                    <SelectContent>{degreeClasses.map((degreeClass) => <SelectItem key={degreeClass} value={degreeClass}>{degreeClass}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              {/* AI Review Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-primary" />
-                    AI Application Review
-                  </h3>
-                  <Badge variant="secondary" className="text-xs">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Gemini
-                  </Badge>
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfAward">Date of Award *</Label>
+                  <Input id="dateOfAward" type="date" value={formData.dateOfAward} onChange={(e) => handleChange("dateOfAward", e.target.value)} required />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="certificateNumber">Certificate Number *</Label>
+                  <Input id="certificateNumber" placeholder="NAUB/CERT/2026/0001" value={formData.certificateNumber} onChange={(e) => handleChange("certificateNumber", e.target.value)} required />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="viceChancellor">Vice Chancellor&apos;s Name *</Label>
+                  <Input id="viceChancellor" placeholder="Name of Vice Chancellor" value={formData.viceChancellor} onChange={(e) => handleChange("viceChancellor", e.target.value)} required />
+                </div>
+              </section>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleReview}
-                  disabled={isReviewing}
-                  className="w-full gap-2"
-                >
-                  {isReviewing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Reviewing application...
-                    </>
-                  ) : (
-                    <>
-                      <Brain className="h-4 w-4" />
-                      Review Application with AI
-                    </>
-                  )}
-                </Button>
+              <section className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Holder Email *</Label>
+                  <Input id="email" type="email" placeholder="student.name@naub.edu.ng" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input id="phone" type="tel" placeholder="+234-XXX-XXX-XXXX" value={formData.phone} onChange={(e) => handleChange("phone", e.target.value)} required />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address">Contact Address *</Label>
+                  <Textarea id="address" placeholder="Student or alumni contact address" value={formData.address} onChange={(e) => handleChange("address", e.target.value)} required rows={3} />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="ipfsCid">IPFS CID / Pinata Reference</Label>
+                  <Input id="ipfsCid" placeholder="Optional demo CID; backend will generate a placeholder if empty" value={formData.ipfsCid} onChange={(e) => handleChange("ipfsCid", e.target.value)} />
+                </div>
+              </section>
 
-                {reviewResult && (
-                  <div
-                    className={`p-4 rounded-lg border ${riskConfig[reviewResult.riskLevel].color}`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      {riskConfig[reviewResult.riskLevel].icon}
-                      <span className="font-semibold">
-                        {riskConfig[reviewResult.riskLevel].label}
-                      </span>
-                      <Badge
-                        className={`${riskConfig[reviewResult.riskLevel].badge} text-white text-xs ml-auto`}
-                      >
-                        {reviewResult.riskLevel.toUpperCase()}
-                      </Badge>
-                    </div>
-
-                    {reviewResult.flags.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-sm font-medium mb-1">
-                          Flags detected:
-                        </p>
-                        <ul className="text-sm space-y-1">
-                          {reviewResult.flags.map((flag, i) => (
-                            <li key={i} className="flex items-start gap-1">
-                              <span className="mt-1">•</span>
-                              <span>{flag}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <p className="text-sm">
-                      <span className="font-medium">Recommendation:</span>{" "}
-                      {reviewResult.recommendation}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Blockchain Notice */}
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Upon submission, this certificate will
-                  be cryptographically hashed and recorded on the blockchain.
-                  This process ensures the certificate is tamper-proof and
-                  permanently verifiable.
+              <div className="rounded-lg border border-primary/20 bg-accent/60 p-4 text-sm">
+                <div className="mb-2 flex items-center gap-2 font-semibold text-foreground">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Client-side hashing and NDPR separation
+                </div>
+                <p className="text-muted-foreground">
+                  The browser computes both the certificate hash and anonymised holder identity hash before submission. Only hash evidence and IPFS metadata are intended for blockchain anchoring; personal data remains off-chain.
                 </p>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-4">
-                <Button type="submit" className="flex-1" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Issuing Certificate...
-                    </>
-                  ) : (
-                    "Issue Certificate"
-                  )}
+              {hashPreview && (
+                <div className="space-y-2 rounded-lg bg-secondary p-4 text-secondary-foreground">
+                  <Badge className="bg-primary text-primary-foreground">SHA-256 Preview</Badge>
+                  <p className="break-all font-mono text-xs">Certificate: {hashPreview.certificateHash}</p>
+                  <p className="break-all font-mono text-xs">Holder: {hashPreview.holderIdentityHash}</p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button type="button" variant="outline" className="gap-2 bg-transparent" onClick={computeHashes}>
+                  <FileKey2 className="h-4 w-4" />
+                  Compute Hashes
                 </Button>
-                <Link href="/admin/dashboard" className="flex-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full bg-transparent"
-                  >
-                    Cancel
-                  </Button>
-                </Link>
+                <Button type="submit" className="flex-1" disabled={isLoading}>
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Issuing Certificate...</> : "Issue and Anchor Certificate"}
+                </Button>
               </div>
             </form>
           </CardContent>
         </Card>
+
+        <aside className="space-y-4">
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Database className="h-5 w-5 text-primary" /> Chapter 3 Traceability</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p><CheckCircle className="mr-2 inline h-4 w-4 text-primary" />FR-05 fields are captured in the issuance form.</p>
+              <p><CheckCircle className="mr-2 inline h-4 w-4 text-primary" />FR-06 hashes are computed in the browser.</p>
+              <p><CheckCircle className="mr-2 inline h-4 w-4 text-primary" />FR-07/FR-08 metadata includes IPFS CID, certificate type, institution, and timestamp.</p>
+              <p><CheckCircle className="mr-2 inline h-4 w-4 text-primary" />NFR-07 keeps personally identifiable data off-chain.</p>
+            </CardContent>
+          </Card>
+        </aside>
       </div>
     </div>
   );

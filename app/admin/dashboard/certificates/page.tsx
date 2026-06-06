@@ -216,9 +216,9 @@ export default function CertificatesPage() {
                       <tr>
                         <th className="text-left p-4 font-medium">Certificate ID</th>
                         <th className="text-left p-4 font-medium">Student / Graduate Name</th>
-                        <th className="text-left p-4 font-medium">Programme / Department</th>
+                        <th className="text-left p-4 font-medium">Programme of Study</th>
                         <th className="text-left p-4 font-medium">Issue Date</th>
-                        <th className="text-left p-4 font-medium">Expiry Date</th>
+                        <th className="text-left p-4 font-medium">Date of Award</th>
                         <th className="text-left p-4 font-medium">Status</th>
                         <th className="text-left p-4 font-medium">Actions</th>
                       </tr>
@@ -230,7 +230,7 @@ export default function CertificatesPage() {
                           <td className="p-4">{cert.companyName}</td>
                           <td className="p-4 text-sm text-muted-foreground">{cert.category}</td>
                           <td className="p-4 text-sm">{formatDate(cert.dateIssued)}</td>
-                          <td className="p-4 text-sm">{formatDate(cert.dateExpiry)}</td>
+                          <td className="p-4 text-sm">{formatDate(cert.dateOfAward || cert.dateIssued)}</td>
                           <td className="p-4">
                             <Badge className={getCertificateStatusColor(cert.status)}>
                               {cert.status}
