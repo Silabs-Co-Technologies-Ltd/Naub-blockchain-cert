@@ -46,7 +46,7 @@ export async function GET() {
         .join("; ");
 
       const text = await deepseekGenerate(
-        `Analyze this NITDA certificate system data and provide exactly 4 concise, specific, data-driven insights (one per line, no bullets or numbering, no formatting characters):
+        `Analyze this NAUB certificate system data and provide exactly 4 concise, specific, data-driven insights (one per line, no bullets or numbering, no formatting characters):
 
 Data:
 - Total certificates: ${total} (${valid} valid, ${expired} expired, ${revoked} revoked)
@@ -73,7 +73,7 @@ Each insight must reference specific numbers from the data and suggest an action
       const validPct = total > 0 ? Math.round((valid / total) * 100) : 0;
       insights = [
         `${valid} of ${total} certificates (${validPct}%) are currently active and valid.`,
-        `${expired} certificate(s) have expired${expired > 0 ? " — consider initiating renewal outreach" : "."}.`,
+        `${expired} certificate(s) have expired${expired > 0 ? " — consider initiating registry support outreach" : "."}.`,
         `${recentVerifs} verification(s) performed in the last 7 days, showing active usage of the portal.`,
         issuedThisMonth > 0
           ? `${issuedThisMonth} certificate(s) issued this month.${revoked > 0 ? ` ${revoked} revocation(s) on record.` : ""}`

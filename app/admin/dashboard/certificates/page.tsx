@@ -152,8 +152,8 @@ export default function CertificatesPage() {
                       type="text"
                       placeholder={
                         isNLSearch
-                          ? 'e.g. "expired cybersecurity certs" or "valid ISP providers"'
-                          : "Search by ID, company name, or category..."
+                          ? 'e.g. "expired computer science certs" or "valid accounting graduates"'
+                          : "Search by ID, student name, or programme..."
                       }
                       className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
                       value={searchQuery}
@@ -215,8 +215,8 @@ export default function CertificatesPage() {
                     <thead className="bg-muted">
                       <tr>
                         <th className="text-left p-4 font-medium">Certificate ID</th>
-                        <th className="text-left p-4 font-medium">Company Name</th>
-                        <th className="text-left p-4 font-medium">Category</th>
+                        <th className="text-left p-4 font-medium">Student / Graduate Name</th>
+                        <th className="text-left p-4 font-medium">Programme / Department</th>
                         <th className="text-left p-4 font-medium">Issue Date</th>
                         <th className="text-left p-4 font-medium">Expiry Date</th>
                         <th className="text-left p-4 font-medium">Status</th>

@@ -21,49 +21,49 @@ export async function POST(req: Request) {
         ? `expired ${daysExpired} day(s) ago`
         : `expiring on ${expiryDate.toLocaleDateString("en-NG")}`;
 
-    let subject = `NITDA Certificate Renewal Required – ${certificate.id}`;
+    let subject = `NAUB Certificate Revalidation Required – ${certificate.id}`;
     let body = `Dear ${certificate.companyName},
 
-This is an official notice from the National Information Technology Development Agency (NITDA) regarding your IT service provider certificate.
+This is an official notice from the Nigerian Army University Biu (NAUB) regarding your NAUB graduate certificate.
 
-Your NITDA certificate (ID: ${certificate.id}) for ${certificate.category} services has ${expiryStatus}. As a registered IT service provider, you are required to maintain a valid certificate to continue operating in this category.
+Your NAUB certificate (ID: ${certificate.id}) for the ${certificate.category} programme has ${expiryStatus}. As a registered NAUB graduate, you are required to maintain a valid certificate to continue presenting this credential for verification.
 
-To renew your certificate, please take the following steps:
-1. Log in to the NITDA Vendor Portal
-2. Complete the renewal application form
+To request revalidation or registry support for your certificate, please take the following steps:
+1. Log in to the NAUB Certificate Registry Portal
+2. Complete the registry support request form
 3. Submit the following documents:
-   - Updated Corporate Affairs Commission (CAC) registration
-   - Evidence of continued operations in the ${certificate.category} sector
-   - Most recent tax clearance certificate
-   - Completed renewal form signed by authorized signatory
-4. Pay the applicable renewal fee
+   - Updated student identity confirmation
+   - Updated academic record evidence in the ${certificate.category} sector
+   - Any required university clearance evidence
+   - Completed registry request form
+4. Pay any approved transcript or certificate processing fee, if applicable
 
-Please complete this renewal at your earliest convenience to avoid disruption to your services.
+Please complete this renewal at your earliest convenience to keep your academic credential record current.
 
-For assistance, contact us at support@nitda.gov.ng or call our helpdesk.
+For assistance, contact us at support@naub.edu.ng or call our helpdesk.
 
 Regards,
 Certificate Management Division
-National Information Technology Development Agency (NITDA)`;
+Nigerian Army University Biu (NAUB)`;
 
     try {
       const text = await deepseekGenerate(
-        `Draft a professional, formal certificate renewal notice email from NITDA (National Information Technology Development Agency of Nigeria) to an IT service provider.
+        `Draft a professional, formal certificate lifecycle notice email from NAUB (Nigerian Army University Biu of Nigeria) to an NAUB graduate.
 
 Certificate Details:
-- Company: ${certificate.companyName}
-- Service Category: ${certificate.category}
+- Holder: ${certificate.companyName}
+- Programme / Department: ${certificate.category}
 - Certificate ID: ${certificate.id}
 - Status: ${expiryStatus}
 - Contact Email: ${certificate.email}
 - Address: ${certificate.address}
 
 Requirements:
-- Official and formal government agency tone
-- Specific to ${certificate.category} services in Nigeria
+- Official and formal university registry tone
+- Specific to the ${certificate.category} programme in Nigeria
 - Include realistic required documents for this category
-- Include clear renewal steps
-- Reference support@nitda.gov.ng
+- Include clear registry support steps
+- Reference support@naub.edu.ng
 - No asterisks or markdown formatting
 
 Format your response exactly as:
@@ -85,9 +85,9 @@ BODY:
 
     return NextResponse.json({ subject, body });
   } catch (error) {
-    console.error("[Draft Renewal Notice]", error);
+    console.error("[Draft Certificate Lifecycle Notice]", error);
     return NextResponse.json(
-      { error: "Failed to draft renewal notice" },
+      { error: "Failed to draft certificate lifecycle notice" },
       { status: 500 }
     );
   }

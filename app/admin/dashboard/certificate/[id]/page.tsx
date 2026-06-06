@@ -33,7 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { QRCodeGenerator } from "@/components/qr-code-generator";
 import { CertificateDownload } from "@/components/certificate-download";
 
-interface RenewalNotice {
+interface LifecycleNotice {
   subject: string;
   body: string;
 }
@@ -48,7 +48,7 @@ export default function CertificateDetailPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [isDraftingNotice, setIsDraftingNotice] = useState(false);
-  const [renewalNotice, setRenewalNotice] = useState<RenewalNotice | null>(null);
+  const [lifecycleNotice, setLifecycleNotice] = useState<LifecycleNotice | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -138,10 +138,10 @@ export default function CertificateDetailPage() {
     }
   };
 
-  const handleDraftRenewalNotice = async () => {
+  const handleDraftLifecycleNotice = async () => {
     if (!certificate) return;
     setIsDraftingNotice(true);
-    setRenewalNotice(null);
+    setLifecycleNotice(null);
 
     try {
       const res = await fetch("/api/admin/draft-renewal-notice", {
@@ -152,11 +152,11 @@ export default function CertificateDetailPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setRenewalNotice(data);
+        setLifecycleNotice(data);
       } else {
         toast({
           title: "Draft Failed",
-          description: "Could not draft the renewal notice. Please try again.",
+          description: "Could not draft the certificate lifecycle notice. Please try again.",
           variant: "destructive",
         });
       }
@@ -172,9 +172,9 @@ export default function CertificateDetailPage() {
   };
 
   const handleCopyNotice = () => {
-    if (!renewalNotice) return;
+    if (!lifecycleNotice) return;
     navigator.clipboard.writeText(
-      `Subject: ${renewalNotice.subject}\n\n${renewalNotice.body}`
+      `Subject: ${lifecycleNotice.subject}\n\n${lifecycleNotice.body}`
     );
     toast({ title: "Copied to clipboard" });
   };
@@ -214,7 +214,7 @@ export default function CertificateDetailPage() {
     typeof window !== "undefined" ? window.location.origin : ""
   }/verify?id=${certificate.id}`;
 
-  const needsRenewal =
+  const needsLifecycleAction =
     certificate.status === "expired" || certificate.status === "revoked";
 
   return (
@@ -282,19 +282,19 @@ export default function CertificateDetailPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Company Information */}
+          {/* Student / Graduate Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Company Information</CardTitle>
+              <CardTitle>Student / Graduate Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Company Name</p>
+                <p className="text-sm text-muted-foreground">Student / Graduate Name</p>
                 <p className="font-semibold">{certificate.companyName}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Service Category
+                  Programme / Department
                 </p>
                 <p className="font-semibold">{certificate.category}</p>
               </div>
@@ -451,14 +451,14 @@ export default function CertificateDetailPage() {
             </CardContent>
           </Card>
 
-          {/* AI Renewal Notice — only for expired/revoked */}
-          {needsRenewal && (
+          {/* AI Certificate Lifecycle Notice — only for expired/revoked */}
+          {needsLifecycleAction && (
             <Card className="md:col-span-2 border-blue-200">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Brain className="h-5 w-5 text-primary" />
-                    AI Renewal Notice
+                    AI Certificate Lifecycle Notice
                     <Badge variant="secondary" className="text-xs">
                       <Sparkles className="h-3 w-3 mr-1" />
                       Gemini
@@ -466,7 +466,7 @@ export default function CertificateDetailPage() {
                   </CardTitle>
                   <Button
                     variant="outline"
-                    onClick={handleDraftRenewalNotice}
+                    onClick={handleDraftLifecycleNotice}
                     disabled={isDraftingNotice}
                     className="gap-2"
                   >
@@ -478,31 +478,31 @@ export default function CertificateDetailPage() {
                     ) : (
                       <>
                         <Mail className="h-4 w-4" />
-                        Draft Renewal Notice
+                        Draft Certificate Lifecycle Notice
                       </>
                     )}
                   </Button>
                 </div>
                 <CardDescription>
-                  Generate an AI-drafted renewal notice email to send to{" "}
+                  Generate an AI-drafted certificate lifecycle notice email to send to{" "}
                   {certificate.companyName}
                 </CardDescription>
               </CardHeader>
-              {renewalNotice && (
+              {lifecycleNotice && (
                 <CardContent>
                   <div className="space-y-4 bg-muted rounded-lg p-4">
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                         Subject
                       </p>
-                      <p className="font-medium">{renewalNotice.subject}</p>
+                      <p className="font-medium">{lifecycleNotice.subject}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                         Body
                       </p>
                       <pre className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                        {renewalNotice.body}
+                        {lifecycleNotice.body}
                       </pre>
                     </div>
                     <div className="flex gap-2 pt-2">
@@ -516,7 +516,7 @@ export default function CertificateDetailPage() {
                         Copy to Clipboard
                       </Button>
                       <a
-                        href={`mailto:${certificate.email}?subject=${encodeURIComponent(renewalNotice.subject)}&body=${encodeURIComponent(renewalNotice.body)}`}
+                        href={`mailto:${certificate.email}?subject=${encodeURIComponent(lifecycleNotice.subject)}&body=${encodeURIComponent(lifecycleNotice.body)}`}
                       >
                         <Button size="sm" className="gap-2">
                           <Mail className="h-4 w-4" />

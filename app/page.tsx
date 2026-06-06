@@ -12,7 +12,7 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <Shield className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="font-bold text-xl">NITDA</h1>
+              <h1 className="font-bold text-xl">NAUB</h1>
               <p className="text-xs text-muted-foreground">Blockchain Certificate System</p>
             </div>
           </div>
@@ -31,11 +31,11 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-3xl mx-auto space-y-6">
           <h2 className="text-5xl font-bold text-balance leading-tight">
-            Secure Digital Certificates for IT Service Providers
+            Secure Digital Certificates for NAUB Graduates
           </h2>
           <p className="text-xl text-muted-foreground text-balance">
             Blockchain-powered certification system ensuring tamper-proof, instantly verifiable credentials for
-            Nigeria's IT industry
+            NAUB academic community
           </p>
           <div className="flex items-center justify-center gap-4 pt-4">
             <Link href="/verify">
@@ -84,7 +84,7 @@ export default function HomePage() {
               <FileCheck className="h-12 w-12 text-chart-3 mb-4" />
               <CardTitle>Tamper-Proof Records</CardTitle>
               <CardDescription>
-                Digital certificates cannot be forged or altered, ensuring complete trust and compliance with NITDA
+                Digital certificates cannot be forged or altered, ensuring complete trust and compliance with NAUB
                 standards
               </CardDescription>
             </CardHeader>
@@ -98,16 +98,16 @@ export default function HomePage() {
           <CardContent className="py-12">
             <div className="grid md:grid-cols-3 gap-8 text-center">
               <div>
-                <div className="text-4xl font-bold mb-2">2,500+</div>
-                <div className="text-primary-foreground/80">Certificates Issued</div>
+                <div className="text-4xl font-bold mb-2">Demo</div>
+                <div className="text-primary-foreground/80">Prototype Issuance</div>
               </div>
               <div>
-                <div className="text-4xl font-bold mb-2">10,000+</div>
-                <div className="text-primary-foreground/80">Verifications</div>
+                <div className="text-4xl font-bold mb-2">Instant</div>
+                <div className="text-primary-foreground/80">Public Verification</div>
               </div>
               <div>
                 <div className="text-4xl font-bold mb-2">100%</div>
-                <div className="text-primary-foreground/80">Secure & Verified</div>
+                <div className="text-primary-foreground/80">Tamper Evident</div>
               </div>
             </div>
           </CardContent>
@@ -117,8 +117,8 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t mt-20">
         <div className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 National Information Technology Development Agency (NITDA)</p>
-          <p className="mt-2">Blockchain Certificate System - Securing Nigeria's Digital Future</p>
+          <p>© 2025 Nigerian Army University Biu (NAUB)</p>
+          <p className="mt-2">Blockchain Certificate System - Securing Academic Credential Trust</p>
         </div>
       </footer>
     </div>

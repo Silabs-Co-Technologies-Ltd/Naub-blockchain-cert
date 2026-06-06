@@ -1,10 +1,8 @@
-// Utility functions for certificate management
-
 export function generateCertificateId(): string {
   const year = new Date().getFullYear();
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.floor(Math.random() * 1000);
-  return `NITDA-${year}-${timestamp}${random}`;
+  return `NAUB-${year}-${timestamp}${random}`;
 }
 
 export function isCertificateExpired(expiryDate: string): boolean {
@@ -33,14 +31,14 @@ export function getCertificateStatusColor(status: string): string {
 }
 
 export const certificateCategories = [
-  "Software Development",
-  "Cybersecurity",
-  "Cloud Services",
-  "Data Analytics",
-  "IT Consulting",
-  "Network Infrastructure",
-  "Web Development",
-  "Mobile App Development",
-  "Database Management",
-  "IT Training",
+  "Computer Science",
+  "Cyber Security",
+  "Software Engineering",
+  "Information Systems",
+  "Accounting",
+  "Economics",
+  "Political Science",
+  "Criminology and Security Studies",
+  "Peace Studies and Conflict Resolution",
+  "Military History",
 ];

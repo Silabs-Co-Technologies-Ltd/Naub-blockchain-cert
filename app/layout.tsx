@@ -9,9 +9,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "NITDA Blockchain Certificate System",
+  title: "NAUB Blockchain Certificate System",
   description:
-    "Secure, blockchain-powered digital certificates for IT service providers",
+    "Secure, blockchain-powered digital certificates for NAUB graduates",
   generator: "v0.app",
 };
 

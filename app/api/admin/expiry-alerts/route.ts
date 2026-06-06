@@ -48,10 +48,10 @@ export async function GET() {
 
     try {
       aiSummary = await deepseekGenerate(
-        `You are the NITDA certificate management AI. Write a concise executive summary (3-4 sentences) for the admin about the current certificate expiry situation:
+        `You are the NAUB certificate management AI. Write a concise executive summary (3-4 sentences) for the admin about the current certificate expiry situation:
 - ${critical.length} certificate(s) expiring within 7 days (CRITICAL)
 - ${warning.length} certificate(s) expiring within 8-30 days (WARNING)
-- ${alreadyExpired.length} certificate(s) already expired and awaiting renewal
+- ${alreadyExpired.length} certificate(s) already expired and awaiting registry follow-up
 - Most affected categories: ${topCategories || "None"}
 
 End with 1-2 specific, actionable recommendations. Be direct and professional. No asterisks or special characters.`,
@@ -66,7 +66,7 @@ End with 1-2 specific, actionable recommendations. Be direct and professional. N
       aiSummary =
         total === 0
           ? "All certificates are in good standing. No expiry actions required at this time."
-          : `${critical.length} certificate(s) require immediate attention (expiring within 7 days). ${warning.length} certificate(s) are expiring within 30 days. ${alreadyExpired.length} certificate(s) have already expired and need renewal. Most affected categories: ${topCategories || "None"}.`;
+          : `${critical.length} certificate(s) require immediate attention (expiring within 7 days). ${warning.length} certificate(s) are expiring within 30 days. ${alreadyExpired.length} certificate(s) have already expired and need registry follow-up. Most affected categories: ${topCategories || "None"}.`;
     }
 
     return NextResponse.json({

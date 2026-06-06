@@ -251,7 +251,7 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <Shield className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="font-bold text-xl">NITDA Admin Dashboard</h1>
+                <h1 className="font-bold text-xl">NAUB Admin Dashboard</h1>
                 <p className="text-xs text-muted-foreground">
                   Certificate Management System
                 </p>
@@ -401,7 +401,7 @@ export default function AdminDashboard() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Active Vendors
+                Active Certificate Holders
               </CardTitle>
               <div className="text-2xl font-bold">
                 {analytics?.validCertificates || 0}
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-yellow-600" />
-                Certificate Renewal Queue
+                Certificate Lifecycle Queue
                 {totalExpiryAlerts > 0 && (
                   <Badge className="bg-yellow-600 text-white ml-1">
                     {totalExpiryAlerts} need action
@@ -459,12 +459,12 @@ export default function AdminDashboard() {
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                  {isSendingEmails ? "Sending..." : "Send Renewal Emails"}
+                  {isSendingEmails ? "Sending..." : "Send Lifecycle Emails"}
                 </Button>
               </div>
             </div>
             <CardDescription>
-              AI-monitored expiry tracking with renewal recommendations. Use DeepSeek AI to auto-send renewal notices.
+              AI-monitored expiry tracking with certificate lifecycle recommendations. Use DeepSeek AI to auto-send certificate lifecycle notices.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -725,8 +725,8 @@ export default function AdminDashboard() {
                   <thead className="bg-muted">
                     <tr>
                       <th className="text-left p-4 font-medium">Certificate ID</th>
-                      <th className="text-left p-4 font-medium">Company Name</th>
-                      <th className="text-left p-4 font-medium">Category</th>
+                      <th className="text-left p-4 font-medium">Student / Graduate Name</th>
+                      <th className="text-left p-4 font-medium">Programme / Department</th>
                       <th className="text-left p-4 font-medium">Issue Date</th>
                       <th className="text-left p-4 font-medium">Status</th>
                       <th className="text-left p-4 font-medium">Actions</th>

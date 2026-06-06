@@ -183,7 +183,7 @@ export default function VerifyPage() {
       setChatMessages([
         {
           role: "assistant",
-          content: `Hi! I'm NITDA's renewal assistant. I can help you understand how to renew the certificate for ${certificate?.companyName}. What would you like to know?`,
+          content: `Hi! I'm NAUB's certificate support assistant. I can help you understand verification, correction, or revalidation for ${certificate?.companyName}. What would you like to know?`,
         },
       ]);
     }
@@ -220,13 +220,13 @@ export default function VerifyPage() {
       } else {
         setChatMessages([
           ...newMessages,
-          { role: "assistant", content: "Sorry, I encountered an issue. Please contact support@nitda.gov.ng for renewal assistance." },
+          { role: "assistant", content: "Sorry, I encountered an issue. Please contact support@naub.edu.ng for certificate support." },
         ]);
       }
     } catch {
       setChatMessages([
         ...newMessages,
-        { role: "assistant", content: "Service temporarily unavailable. Please contact support@nitda.gov.ng." },
+        { role: "assistant", content: "Service temporarily unavailable. Please contact support@naub.edu.ng." },
       ]);
     } finally {
       setIsChatLoading(false);
@@ -241,7 +241,7 @@ export default function VerifyPage() {
           <Link href="/" className="flex items-center gap-3">
             <Shield className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="font-bold text-xl">NITDA</h1>
+              <h1 className="font-bold text-xl">NAUB</h1>
               <p className="text-xs text-muted-foreground">Certificate Verification</p>
             </div>
           </Link>
@@ -265,7 +265,7 @@ export default function VerifyPage() {
             <form onSubmit={handleVerify} className="space-y-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter Certificate ID (e.g., NITDA-2024-001)"
+                  placeholder="Enter Certificate ID (e.g., NAUB-2024-001)"
                   value={certificateId}
                   onChange={(e) => setCertificateId(e.target.value)}
                   className="flex-1"
@@ -300,15 +300,15 @@ export default function VerifyPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Vendor Information</CardTitle>
+                      <CardTitle>Certificate Holder Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Company Name</p>
+                        <p className="text-sm text-muted-foreground">Student / Graduate Name</p>
                         <p className="font-semibold text-lg">{certificate.companyName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Service Category</p>
+                        <p className="text-sm text-muted-foreground">Programme / Department</p>
                         <p className="font-semibold">{certificate.category}</p>
                       </div>
                       <div>
@@ -395,7 +395,7 @@ export default function VerifyPage() {
 
                     <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
                       <p className="text-sm text-primary">
-                        <strong>Verified:</strong> This certificate's hash has been verified on the blockchain and matches the official NITDA records.
+                        <strong>Verified:</strong> This certificate's hash has been verified on the blockchain and matches the official NAUB records.
                         {certificate.status === "revoked" && (
                           <span className="block mt-2 text-red-600">
                             <strong>Revoked:</strong> This certificate has been permanently revoked and recorded on the blockchain.
@@ -406,17 +406,17 @@ export default function VerifyPage() {
                   </CardContent>
                 </Card>
 
-                {/* 3. Renewal Chatbot (expired or revoked only) */}
+                {/* 3. Certificate support chatbot (expired or revoked only) */}
                 {(certificate.status === "expired" || certificate.status === "revoked") && (
                   <Card className="border-blue-200">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Bot className="h-5 w-5 text-primary" />
-                        Renewal Assistance
+                        Certificate Support
                       </CardTitle>
                       <CardDescription>
                         {certificate.status === "expired"
-                          ? "This certificate has expired. Chat with our AI assistant to learn how to renew it."
+                          ? "This certificate is no longer current. Chat with our AI assistant to learn about revalidation or registry support."
                           : "This certificate has been revoked. Chat with our AI assistant for guidance."}
                       </CardDescription>
                     </CardHeader>
@@ -424,7 +424,7 @@ export default function VerifyPage() {
                       {!showChatbot ? (
                         <Button onClick={handleOpenChatbot} className="gap-2 w-full" variant="outline">
                           <MessageSquare className="h-4 w-4" />
-                          Chat with Renewal Assistant
+                          Chat with Certificate Assistant
                         </Button>
                       ) : (
                         <div className="space-y-4">
@@ -465,7 +465,7 @@ export default function VerifyPage() {
 
                           <form onSubmit={handleSendMessage} className="flex gap-2">
                             <Input
-                              placeholder="Ask about renewal requirements, timelines, fees..."
+                              placeholder="Ask about certificate revalidation, correction steps, timelines..."
                               value={chatInput}
                               onChange={(e) => setChatInput(e.target.value)}
                               disabled={isChatLoading}
@@ -487,8 +487,8 @@ export default function VerifyPage() {
 
                           <p className="text-xs text-muted-foreground">
                             For official guidance, contact{" "}
-                            <a href="mailto:support@nitda.gov.ng" className="underline">
-                              support@nitda.gov.ng
+                            <a href="mailto:support@naub.edu.ng" className="underline">
+                              support@naub.edu.ng
                             </a>
                           </p>
                         </div>
@@ -561,7 +561,7 @@ export default function VerifyPage() {
                     <h3 className="text-xl font-bold mb-2">Certificate Not Found</h3>
                     <p className="text-muted-foreground mb-4">{error}</p>
                     <p className="text-sm text-muted-foreground">
-                      Please check the certificate ID and try again. If you believe this is an error, contact NITDA.
+                      Please check the certificate ID and try again. If you believe this is an error, contact NAUB.
                     </p>
                   </div>
                 </CardContent>
@@ -604,7 +604,7 @@ export default function VerifyPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Certificates cannot be forged or altered, ensuring complete trust in vendor credentials.
+                  Certificates cannot be forged or altered, ensuring complete trust in certificate holder credentials.
                 </p>
               </CardContent>
             </Card>
@@ -618,8 +618,8 @@ export default function VerifyPage() {
 
       <footer className="border-t mt-20">
         <div className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 National Information Technology Development Agency (NITDA)</p>
-          <p className="mt-2">For support or inquiries, contact support@nitda.gov.ng</p>
+          <p>© 2025 Nigerian Army University Biu (NAUB)</p>
+          <p className="mt-2">For support or inquiries, contact support@naub.edu.ng</p>
         </div>
       </footer>
     </div>

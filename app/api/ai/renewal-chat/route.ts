@@ -13,21 +13,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const systemPrompt = `You are NITDA's official renewal assistance AI, helping IT service providers renew their certificates.
+    const systemPrompt = `You are NAUB's official certificate support AI, helping Nigerian Army University Biu graduates understand certificate verification, revalidation, correction, and registry support workflows.
 
-Company context:
-- Company: ${certificate.companyName}
-- Category: ${certificate.category}
+Certificate context:
+- Holder: ${certificate.companyName}
+- Programme / Department: ${certificate.category}
 - Certificate ID: ${certificate.id}
 - Expiry Date: ${new Date(certificate.dateExpiry).toLocaleDateString("en-NG")}
 - Status: ${certificate.status}
 
 Guidelines:
-- Be helpful, concise, and specific to ${certificate.category} services in Nigeria
-- Provide realistic estimates for documents, fees, and timelines based on NITDA procedures
-- Always recommend contacting support@nitda.gov.ng for official confirmation
-- Keep responses under 4 sentences unless more detail is clearly needed
-- Never make up specific fee amounts — direct to NITDA portal for exact figures`;
+- Be helpful, concise, and specific to academic certificate verification in Nigeria
+- Provide realistic estimates for registry documents, processing fees, and timelines without inventing exact fee amounts
+- Always recommend contacting support@naub.edu.ng or the NAUB registry for official confirmation
+- Keep responses under 4 sentences unless more detail is clearly needed`;
 
     if (!isDeepSeekConfigured()) {
       const reply = getTemplateReply(message, certificate);
@@ -48,11 +47,11 @@ Guidelines:
 
     const reply =
       (await deepseekChat(messages, { temperature: 0.7, maxTokens: 250 })) ??
-      "I apologize, I could not generate a response. Please contact support@nitda.gov.ng for assistance.";
+      "I apologize, I could not generate a response. Please contact support@naub.edu.ng for assistance.";
 
     return NextResponse.json({ reply });
   } catch (error) {
-    console.error("[Renewal Chat]", error);
+    console.error("[Certificate Support Chat]", error);
     return NextResponse.json(
       { error: "Chat service temporarily unavailable" },
       { status: 500 }
@@ -64,20 +63,20 @@ function getTemplateReply(message: string, certificate: any): string {
   const lower = message.toLowerCase();
 
   if (lower.includes("document") || lower.includes("required") || lower.includes("need") || lower.includes("submit")) {
-    return `For ${certificate.category} renewal, you will typically need: an updated CAC registration certificate, evidence of continued operations in the ${certificate.category} sector, a completed NITDA renewal application form, and your most recent tax clearance certificate. Contact support@nitda.gov.ng to confirm the exact list for your category.`;
+    return `For ${certificate.category} certificate support, you will typically need a valid student or alumni identity document, certificate ID, proof of graduation where available, and any registry correction or revalidation form requested by NAUB. Contact support@naub.edu.ng or the registry to confirm the exact list.`;
   }
   if (lower.includes("how long") || lower.includes("time") || lower.includes("duration") || lower.includes("process")) {
-    return "The renewal process typically takes 2–4 weeks from submission of complete documentation. Submit all required documents together to avoid delays in processing.";
+    return "Registry review timelines vary, but simple verification or correction requests are commonly handled faster when all supporting documents are submitted together. Contact NAUB registry for the official timeline for your case.";
   }
   if (lower.includes("fee") || lower.includes("cost") || lower.includes("price") || lower.includes("pay")) {
-    return `Renewal fees vary by service category. Visit the NITDA portal or contact support@nitda.gov.ng for the current fee schedule applicable to ${certificate.category} services.`;
+    return `Any approved processing fee depends on the request type. Please use the official NAUB registry channel for the current fee schedule for ${certificate.category} certificate support.`;
   }
   if (lower.includes("start") || lower.includes("begin") || lower.includes("apply") || lower.includes("steps")) {
-    return `To begin renewal: (1) Gather the required documents for ${certificate.category} services, (2) Visit the NITDA Vendor Portal or regional office, (3) Submit your completed renewal application with all documents, (4) Pay the applicable renewal fee. Contact support@nitda.gov.ng for assistance.`;
+    return `To begin: (1) copy your certificate ID ${certificate.id}, (2) gather your student or alumni identification evidence, (3) contact NAUB registry or support@naub.edu.ng, and (4) submit any requested correction or revalidation form.`;
   }
-  if (lower.includes("penalty") || lower.includes("fine") || lower.includes("late")) {
-    return "Operating without a valid certificate may result in regulatory sanctions. We recommend initiating renewal immediately. Contact support@nitda.gov.ng to discuss your specific situation.";
+  if (lower.includes("revoked") || lower.includes("invalid") || lower.includes("mismatch")) {
+    return "If a certificate appears revoked, invalid, or mismatched, do not rely on it until NAUB registry confirms the record. Share the certificate ID and verification result with the registry for investigation.";
   }
 
-  return `For specific guidance on renewing your ${certificate.category} certificate (${certificate.id}), please contact support@nitda.gov.ng or visit the NITDA Vendor Portal. Our team will guide you through the renewal process step by step.`;
+  return `For specific guidance on certificate ${certificate.id} for ${certificate.companyName}, contact support@naub.edu.ng or the NAUB registry. They can confirm verification, correction, and revalidation steps for the ${certificate.category} programme.`;
 }

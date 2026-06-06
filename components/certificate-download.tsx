@@ -20,7 +20,7 @@ export function CertificateDownload({
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>NITDA Certificate - ${certificate.id}</title>
+          <title>NAUB Certificate - ${certificate.id}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -113,9 +113,9 @@ export function CertificateDownload({
         <body>
           <div class="certificate">
             <div class="header">
-              <div class="logo">🛡️ NITDA</div>
-              <div class="subtitle">National Information Technology Development Agency</div>
-              <div class="title">IT Service Provider Certificate</div>
+              <div class="logo">🛡️ NAUB</div>
+              <div class="subtitle">Nigerian Army University Biu</div>
+              <div class="title">Academic Certificate</div>
             </div>
             
             <div class="content">
@@ -124,11 +124,11 @@ export function CertificateDownload({
                 <div class="field-value">${certificate.id}</div>
               </div>
               <div class="field">
-                <div class="field-label">Company Name:</div>
+                <div class="field-label">Student / Graduate Name:</div>
                 <div class="field-value">${certificate.companyName}</div>
               </div>
               <div class="field">
-                <div class="field-label">Service Category:</div>
+                <div class="field-label">Programme / Department:</div>
                 <div class="field-value">${certificate.category}</div>
               </div>
               <div class="field">
@@ -184,7 +184,7 @@ export function CertificateDownload({
             }
 
             <div class="footer">
-              <p><strong>This is an official certificate issued by NITDA</strong></p>
+              <p><strong>This is an official certificate issued by NAUB</strong></p>
               <p>Verified on blockchain - Transaction: ${
                 certificate.transactionHash
               }</p>
@@ -203,7 +203,7 @@ export function CertificateDownload({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `NITDA-Certificate-${certificate.id}.html`;
+    link.download = `NAUB-Certificate-${certificate.id}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

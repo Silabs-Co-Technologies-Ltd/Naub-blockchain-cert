@@ -1,5 +1,5 @@
 /**
- * NITDA Blockchain Certificate System
+ * NAUB Blockchain Certificate System
  *
  * This module provides blockchain integration for the certificate system using:
  * - Ethers.js for blockchain interactions

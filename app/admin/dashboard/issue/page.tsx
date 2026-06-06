@@ -186,7 +186,7 @@ export default function IssueCertificatePage() {
             <div>
               <h1 className="font-bold text-xl">Issue New Certificate</h1>
               <p className="text-xs text-muted-foreground">
-                Register and certify IT service provider
+                Issue and anchor a NAUB academic certificate
               </p>
             </div>
           </div>
@@ -198,23 +198,23 @@ export default function IssueCertificatePage() {
           <CardHeader>
             <CardTitle>Certificate Details</CardTitle>
             <CardDescription>
-              Enter the vendor information to generate a blockchain-secured
+              Enter the certificate holder information to generate a blockchain-secured
               certificate
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Company Information */}
+              {/* Student / Graduate Information */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Company Information</h3>
+                <h3 className="font-semibold text-lg">Student / Graduate Information</h3>
 
                 <div className="space-y-2">
                   <Label htmlFor="companyName">
-                    Company Name <span className="text-destructive">*</span>
+                    Student / Graduate Name <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="companyName"
-                    placeholder="e.g., TechVision Solutions Ltd"
+                    placeholder="e.g., Amina Yusuf"
                     value={formData.companyName}
                     onChange={(e) =>
                       handleChange("companyName", e.target.value)
@@ -225,7 +225,7 @@ export default function IssueCertificatePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="category">
-                    Service Category <span className="text-destructive">*</span>
+                    Programme / Department <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={formData.category}
@@ -233,7 +233,7 @@ export default function IssueCertificatePage() {
                     required
                   >
                     <SelectTrigger id="category">
-                      <SelectValue placeholder="Select a category" />
+                      <SelectValue placeholder="Select a programme or department" />
                     </SelectTrigger>
                     <SelectContent>
                       {certificateCategories.map((category) => (
@@ -252,7 +252,7 @@ export default function IssueCertificatePage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="contact@company.com"
+                    placeholder="student.name@naub.edu.ng"
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
                     required
@@ -275,11 +275,11 @@ export default function IssueCertificatePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="address">
-                    Business Address <span className="text-destructive">*</span>
+                    Contact Address <span className="text-destructive">*</span>
                   </Label>
                   <Textarea
                     id="address"
-                    placeholder="Enter full business address"
+                    placeholder="Enter student or alumni contact address"
                     value={formData.address}
                     onChange={(e) => handleChange("address", e.target.value)}
                     required
