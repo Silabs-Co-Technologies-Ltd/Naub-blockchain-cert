@@ -21,12 +21,22 @@ import {
   Clock,
   Download,
   QrCode,
+  Brain,
+  Mail,
+  Copy,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
 import type { Certificate } from "@/lib/database";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeGenerator } from "@/components/qr-code-generator";
 import { CertificateDownload } from "@/components/certificate-download";
+
+interface LifecycleNotice {
+  subject: string;
+  body: string;
+}
 
 export default function CertificateDetailPage() {
   const params = useParams();
@@ -36,6 +46,9 @@ export default function CertificateDetailPage() {
   const [isRevoking, setIsRevoking] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [isDraftingNotice, setIsDraftingNotice] = useState(false);
+  const [lifecycleNotice, setLifecycleNotice] = useState<LifecycleNotice | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -78,7 +91,7 @@ export default function CertificateDetailPage() {
   const handleRevoke = async () => {
     if (
       !confirm(
-        "Are you sure you want to revoke this certificate? This action cannot be undone.",
+        "Are you sure you want to revoke this certificate? This action cannot be undone."
       )
     ) {
       return;
@@ -125,6 +138,47 @@ export default function CertificateDetailPage() {
     }
   };
 
+  const handleDraftLifecycleNotice = async () => {
+    if (!certificate) return;
+    setIsDraftingNotice(true);
+    setLifecycleNotice(null);
+
+    try {
+      const res = await fetch("/api/admin/draft-renewal-notice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ certificate }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setLifecycleNotice(data);
+      } else {
+        toast({
+          title: "Draft Failed",
+          description: "Could not draft the certificate lifecycle notice. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Service unavailable. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDraftingNotice(false);
+    }
+  };
+
+  const handleCopyNotice = () => {
+    if (!lifecycleNotice) return;
+    navigator.clipboard.writeText(
+      `Subject: ${lifecycleNotice.subject}\n\n${lifecycleNotice.body}`
+    );
+    toast({ title: "Copied to clipboard" });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -159,6 +213,9 @@ export default function CertificateDetailPage() {
   const verificationUrl = `${
     typeof window !== "undefined" ? window.location.origin : ""
   }/verify?id=${certificate.id}`;
+
+  const needsLifecycleAction =
+    certificate.status === "expired" || certificate.status === "revoked";
 
   return (
     <div className="min-h-screen bg-background">
@@ -232,9 +289,7 @@ export default function CertificateDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Student / Graduate Name
-                </p>
+                <p className="text-sm text-muted-foreground">Student / Graduate Name</p>
                 <p className="font-semibold">{certificate.companyName}</p>
               </div>
               <div>
@@ -252,18 +307,12 @@ export default function CertificateDetailPage() {
                 <p className="font-semibold">{certificate.phone}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Matriculation Number
-                </p>
-                <p className="font-semibold">
-                  {certificate.matriculationNumber || "Not recorded"}
-                </p>
+                <p className="text-sm text-muted-foreground">Matriculation Number</p>
+                <p className="font-semibold">{certificate.matriculationNumber || "Not recorded"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Class of Degree</p>
-                <p className="font-semibold">
-                  {certificate.classOfDegree || "Not recorded"}
-                </p>
+                <p className="font-semibold">{certificate.classOfDegree || "Not recorded"}</p>
               </div>
             </CardContent>
           </Card>
@@ -295,9 +344,7 @@ export default function CertificateDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Date of Award</p>
                 <p className="font-semibold">
-                  {formatDate(
-                    certificate.dateOfAward || certificate.dateIssued,
-                  )}
+                  {formatDate(certificate.dateOfAward || certificate.dateIssued)}
                 </p>
               </div>
             </CardContent>
@@ -407,6 +454,85 @@ export default function CertificateDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Certificate Lifecycle Notice — only for expired/revoked */}
+          {needsLifecycleAction && (
+            <Card className="md:col-span-2 border-blue-200">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    AI Certificate Lifecycle Notice
+                    <Badge variant="secondary" className="text-xs">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Gemini
+                    </Badge>
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    onClick={handleDraftLifecycleNotice}
+                    disabled={isDraftingNotice}
+                    className="gap-2"
+                  >
+                    {isDraftingNotice ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Drafting...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4" />
+                        Draft Certificate Lifecycle Notice
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <CardDescription>
+                  Generate an AI-drafted certificate lifecycle notice email to send to{" "}
+                  {certificate.companyName}
+                </CardDescription>
+              </CardHeader>
+              {lifecycleNotice && (
+                <CardContent>
+                  <div className="space-y-4 bg-muted rounded-lg p-4">
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                        Subject
+                      </p>
+                      <p className="font-medium">{lifecycleNotice.subject}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                        Body
+                      </p>
+                      <pre className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                        {lifecycleNotice.body}
+                      </pre>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyNotice}
+                        className="gap-2"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy to Clipboard
+                      </Button>
+                      <a
+                        href={`mailto:${certificate.email}?subject=${encodeURIComponent(lifecycleNotice.subject)}&body=${encodeURIComponent(lifecycleNotice.body)}`}
+                      >
+                        <Button size="sm" className="gap-2">
+                          <Mail className="h-4 w-4" />
+                          Open in Email Client
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
         </div>
 
         {/* Actions */}
