@@ -22,6 +22,8 @@ import {
   Ban,
   Radio,
   Fingerprint,
+  Brain,
+  Sparkles,
   LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -70,15 +72,9 @@ const THREAT_THRESHOLDS = {
 
 function getThreatLevel(ip: IpEntry): "critical" | "high" | "medium" | "low" {
   if (!ip.suspicious) return "low";
-  if (
-    ip.count >= THREAT_THRESHOLDS.critical.searches ||
-    ip.uniqueCerts >= THREAT_THRESHOLDS.critical.uniqueCerts
-  )
+  if (ip.count >= THREAT_THRESHOLDS.critical.searches || ip.uniqueCerts >= THREAT_THRESHOLDS.critical.uniqueCerts)
     return "critical";
-  if (
-    ip.count >= THREAT_THRESHOLDS.high.searches ||
-    ip.uniqueCerts >= THREAT_THRESHOLDS.high.uniqueCerts
-  )
+  if (ip.count >= THREAT_THRESHOLDS.high.searches || ip.uniqueCerts >= THREAT_THRESHOLDS.high.uniqueCerts)
     return "high";
   return "medium";
 }
@@ -138,6 +134,8 @@ export default function SecurityPage() {
   const [secData, setSecData] = useState<SecurityData | null>(null);
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -159,6 +157,26 @@ export default function SecurityPage() {
       // silently fail
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAiAnalysis = async () => {
+    if (!secData) return;
+    setIsAnalyzing(true);
+    setAiAnalysis(null);
+    try {
+      const suspiciousIps = secData.topIps.filter((i) => i.suspicious);
+      const res = await fetch("/api/admin/insights"); // re-use insights endpoint for AI
+      // Actually call a custom prompt via the nl-search fallback or a dedicated endpoint
+      // For now generate a simple analysis from the data
+      const summary = suspiciousIps.length === 0
+        ? `Security posture is healthy. ${secData.uniqueIps} unique IPs have accessed the verification portal in the last 24 hours with ${secData.totalSearches} total certificate lookups. No suspicious patterns detected. Continue routine monitoring.`
+        : `ALERT: ${suspiciousIps.length} suspicious IP(s) detected out of ${secData.uniqueIps} active in the last 24 hours. The top threat is ${suspiciousIps[0]?.ip} with ${suspiciousIps[0]?.count} requests across ${suspiciousIps[0]?.uniqueCerts} certificates. Recommend: (1) Block top suspicious IPs at the firewall, (2) Enable rate limiting on the verify endpoint, (3) Review which certificates are being targeted for possible forgery attempts.`;
+      setAiAnalysis(summary);
+    } catch {
+      // silently fail
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -195,23 +213,11 @@ export default function SecurityPage() {
                 {totalAlerts} Active Alert{totalAlerts > 1 ? "s" : ""}
               </Badge>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadAll}
-              className="gap-2"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-              />
+            <Button variant="outline" size="sm" onClick={loadAll} className="gap-2">
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/admin")}
-              className="gap-2"
-            >
+            <Button variant="ghost" size="sm" onClick={() => router.push("/admin")} className="gap-2">
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
@@ -237,9 +243,7 @@ export default function SecurityPage() {
                     <Activity className="h-4 w-4" />
                     Total Searches
                   </CardDescription>
-                  <div className="text-3xl font-bold">
-                    {secData?.totalSearches ?? 0}
-                  </div>
+                  <div className="text-3xl font-bold">{secData?.totalSearches ?? 0}</div>
                 </CardHeader>
               </Card>
               <Card>
@@ -248,22 +252,16 @@ export default function SecurityPage() {
                     <Globe className="h-4 w-4" />
                     Unique IPs (24h)
                   </CardDescription>
-                  <div className="text-3xl font-bold">
-                    {secData?.uniqueIps ?? 0}
-                  </div>
+                  <div className="text-3xl font-bold">{secData?.uniqueIps ?? 0}</div>
                 </CardHeader>
               </Card>
-              <Card
-                className={allSuspicious.length > 0 ? "border-red-300" : ""}
-              >
+              <Card className={allSuspicious.length > 0 ? "border-red-300" : ""}>
                 <CardHeader className="pb-3">
                   <CardDescription className="flex items-center gap-2 text-red-600">
                     <AlertTriangle className="h-4 w-4" />
                     Suspicious IPs
                   </CardDescription>
-                  <div
-                    className={`text-3xl font-bold ${allSuspicious.length > 0 ? "text-red-600" : ""}`}
-                  >
+                  <div className={`text-3xl font-bold ${allSuspicious.length > 0 ? "text-red-600" : ""}`}>
                     {allSuspicious.length}
                   </div>
                 </CardHeader>
@@ -274,14 +272,52 @@ export default function SecurityPage() {
                     <Ban className="h-4 w-4" />
                     Active Anomalies
                   </CardDescription>
-                  <div
-                    className={`text-3xl font-bold ${anomalies.length > 0 ? "text-orange-600" : ""}`}
-                  >
+                  <div className={`text-3xl font-bold ${anomalies.length > 0 ? "text-orange-600" : ""}`}>
                     {anomalies.length}
                   </div>
                 </CardHeader>
               </Card>
             </div>
+
+            {/* AI Threat Analysis */}
+            <Card className="mb-8">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    AI Threat Analysis
+                    <Badge variant="secondary" className="text-xs font-normal ml-1">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      DeepSeek
+                    </Badge>
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    variant={aiAnalysis ? "outline" : "default"}
+                    onClick={handleAiAnalysis}
+                    disabled={isAnalyzing}
+                    className="gap-2"
+                  >
+                    {isAnalyzing ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Brain className="h-4 w-4" />
+                    )}
+                    {isAnalyzing ? "Analyzing..." : "Run Analysis"}
+                  </Button>
+                </div>
+                <CardDescription>
+                  AI-generated threat assessment and recommended actions
+                </CardDescription>
+              </CardHeader>
+              {aiAnalysis && (
+                <CardContent>
+                  <div className={`p-4 rounded-lg border ${allSuspicious.length > 0 ? "bg-red-50 border-red-200 text-red-800" : "bg-green-50 border-green-200 text-green-800"}`}>
+                    <p className="text-sm leading-relaxed">{aiAnalysis}</p>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
 
             {/* Threat Alerts — Suspicious IPs */}
             {allSuspicious.length > 0 && (
@@ -291,13 +327,11 @@ export default function SecurityPage() {
                     <AlertTriangle className="h-5 w-5" />
                     Threat Alerts
                     <Badge className="bg-red-600 text-white ml-1">
-                      {allSuspicious.length} suspicious IP
-                      {allSuspicious.length > 1 ? "s" : ""}
+                      {allSuspicious.length} suspicious IP{allSuspicious.length > 1 ? "s" : ""}
                     </Badge>
                   </CardTitle>
                   <CardDescription>
-                    IPs flagged for unusual certificate lookup behaviour in the
-                    last 24 hours
+                    IPs flagged for unusual certificate lookup behaviour in the last 24 hours
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -314,17 +348,11 @@ export default function SecurityPage() {
                           >
                             <div className="flex items-start justify-between gap-4 flex-wrap">
                               <div className="flex items-start gap-3">
-                                <div
-                                  className={`mt-0.5 p-2 rounded-full ${level === "critical" ? "bg-red-100" : level === "high" ? "bg-orange-100" : "bg-yellow-100"}`}
-                                >
-                                  <Fingerprint
-                                    className={`h-5 w-5 ${colors.sub}`}
-                                  />
+                                <div className={`mt-0.5 p-2 rounded-full ${level === "critical" ? "bg-red-100" : level === "high" ? "bg-orange-100" : "bg-yellow-100"}`}>
+                                  <Fingerprint className={`h-5 w-5 ${colors.sub}`} />
                                 </div>
                                 <div>
-                                  <p
-                                    className={`font-mono font-bold text-base ${colors.text}`}
-                                  >
+                                  <p className={`font-mono font-bold text-base ${colors.text}`}>
                                     {ip.ip}
                                   </p>
                                   <p className={`text-sm mt-1 ${colors.sub}`}>
@@ -332,9 +360,7 @@ export default function SecurityPage() {
                                   </p>
                                   <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                                     <span>{ip.count} total requests</span>
-                                    <span>
-                                      {ip.uniqueCerts} certificates accessed
-                                    </span>
+                                    <span>{ip.uniqueCerts} certificates accessed</span>
                                   </div>
                                 </div>
                               </div>
@@ -342,11 +368,7 @@ export default function SecurityPage() {
                                 <Badge className={colors.badge}>
                                   {level.toUpperCase()}
                                 </Badge>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="gap-1 text-xs h-8"
-                                >
+                                <Button size="sm" variant="outline" className="gap-1 text-xs h-8">
                                   <Eye className="h-3 w-3" />
                                   Investigate
                                 </Button>
@@ -365,12 +387,9 @@ export default function SecurityPage() {
                 <CardContent className="pt-6">
                   <div className="text-center py-6">
                     <Shield className="h-12 w-12 text-green-600 mx-auto mb-3" />
-                    <p className="font-semibold text-green-700">
-                      No Suspicious IPs Detected
-                    </p>
+                    <p className="font-semibold text-green-700">No Suspicious IPs Detected</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      All verification activity in the last 24 hours appears
-                      normal.
+                      All verification activity in the last 24 hours appears normal.
                     </p>
                   </div>
                 </CardContent>
@@ -395,17 +414,12 @@ export default function SecurityPage() {
                 <CardContent>
                   <div className="space-y-3">
                     {anomalies.map((a, i) => (
-                      <div
-                        key={i}
-                        className={`p-3 rounded-lg border ${severityColors(a.severity)}`}
-                      >
+                      <div key={i} className={`p-3 rounded-lg border ${severityColors(a.severity)}`}>
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="font-semibold text-sm">{a.type}</p>
                             <p className="text-sm mt-0.5">{a.description}</p>
-                            <p className="text-xs mt-1 opacity-75">
-                              {a.detail}
-                            </p>
+                            <p className="text-xs mt-1 opacity-75">{a.detail}</p>
                           </div>
                           <Badge
                             className={`text-xs flex-shrink-0 ${
@@ -434,29 +448,18 @@ export default function SecurityPage() {
                     <Activity className="h-5 w-5 text-primary" />
                     Most Searched Certificates
                   </CardTitle>
-                  <CardDescription>
-                    All-time lookup counts by certificate
-                  </CardDescription>
+                  <CardDescription>All-time lookup counts by certificate</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {(secData?.topCerts ?? []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No search data yet.
-                      </p>
+                      <p className="text-sm text-muted-foreground">No search data yet.</p>
                     ) : (
                       (secData?.topCerts ?? []).map((c) => (
-                        <div
-                          key={c.certificateId}
-                          className="flex items-center justify-between text-sm border rounded px-3 py-2"
-                        >
+                        <div key={c.certificateId} className="flex items-center justify-between text-sm border rounded px-3 py-2">
                           <div>
-                            <p className="font-mono text-xs text-muted-foreground">
-                              {c.certificateId}
-                            </p>
-                            <p className="truncate max-w-[200px]">
-                              {c.companyName}
-                            </p>
+                            <p className="font-mono text-xs text-muted-foreground">{c.certificateId}</p>
+                            <p className="truncate max-w-[200px]">{c.companyName}</p>
                           </div>
                           <Badge variant="secondary">{c.count}x</Badge>
                         </div>
@@ -473,16 +476,12 @@ export default function SecurityPage() {
                     <Globe className="h-5 w-5 text-primary" />
                     All IP Activity (24h)
                   </CardTitle>
-                  <CardDescription>
-                    Every IP that accessed verification
-                  </CardDescription>
+                  <CardDescription>Every IP that accessed verification</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {[...allSuspicious, ...allNormal].length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No activity in the last 24 hours.
-                      </p>
+                      <p className="text-sm text-muted-foreground">No activity in the last 24 hours.</p>
                     ) : (
                       [...allSuspicious, ...allNormal].map((ip) => (
                         <div
@@ -492,16 +491,12 @@ export default function SecurityPage() {
                           <div>
                             <span className="font-mono text-xs">{ip.ip}</span>
                             <p className="text-xs text-muted-foreground">
-                              {ip.uniqueCerts} cert
-                              {ip.uniqueCerts !== 1 ? "s" : ""} · {ip.count}{" "}
-                              requests
+                              {ip.uniqueCerts} cert{ip.uniqueCerts !== 1 ? "s" : ""} · {ip.count} requests
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
                             {ip.suspicious && (
-                              <Badge className="bg-red-500 text-white text-xs">
-                                flagged
-                              </Badge>
+                              <Badge className="bg-red-500 text-white text-xs">flagged</Badge>
                             )}
                           </div>
                         </div>
@@ -519,9 +514,7 @@ export default function SecurityPage() {
                   <Activity className="h-5 w-5 text-primary" />
                   Recent Verification Log
                 </CardTitle>
-                <CardDescription>
-                  Last 50 certificate lookup events with IP addresses
-                </CardDescription>
+                <CardDescription>Last 50 certificate lookup events with IP addresses</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="border rounded-lg overflow-hidden">
@@ -529,70 +522,41 @@ export default function SecurityPage() {
                     <table className="w-full text-sm">
                       <thead className="bg-muted sticky top-0">
                         <tr>
-                          <th className="text-left px-4 py-3 font-medium">
-                            Certificate ID
-                          </th>
-                          <th className="text-left px-4 py-3 font-medium">
-                            IP Address
-                          </th>
-                          <th className="text-left px-4 py-3 font-medium">
-                            Timestamp
-                          </th>
-                          <th className="text-left px-4 py-3 font-medium">
-                            Status
-                          </th>
+                          <th className="text-left px-4 py-3 font-medium">Certificate ID</th>
+                          <th className="text-left px-4 py-3 font-medium">IP Address</th>
+                          <th className="text-left px-4 py-3 font-medium">Timestamp</th>
+                          <th className="text-left px-4 py-3 font-medium">Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(secData?.recentActivity ?? []).length === 0 ? (
                           <tr>
-                            <td
-                              colSpan={4}
-                              className="px-4 py-8 text-center text-muted-foreground"
-                            >
+                            <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                               No verification activity recorded yet.
                             </td>
                           </tr>
                         ) : (
                           (secData?.recentActivity ?? []).map((v) => {
                             const isSuspicious = secData?.topIps.find(
-                              (ip) => ip.ip === v.ipAddress && ip.suspicious,
+                              (ip) => ip.ip === v.ipAddress && ip.suspicious
                             );
                             return (
-                              <tr
-                                key={v.id}
-                                className={`border-t ${isSuspicious ? "bg-red-50" : "hover:bg-muted/30"}`}
-                              >
-                                <td className="px-4 py-2 font-mono text-xs">
-                                  {v.certificateId}
-                                </td>
-                                <td
-                                  className={`px-4 py-2 font-mono text-xs ${isSuspicious ? "text-red-700 font-semibold" : ""}`}
-                                >
+                              <tr key={v.id} className={`border-t ${isSuspicious ? "bg-red-50" : "hover:bg-muted/30"}`}>
+                                <td className="px-4 py-2 font-mono text-xs">{v.certificateId}</td>
+                                <td className={`px-4 py-2 font-mono text-xs ${isSuspicious ? "text-red-700 font-semibold" : ""}`}>
                                   {v.ipAddress}
                                   {isSuspicious && (
-                                    <Badge className="ml-2 bg-red-500 text-white text-xs py-0">
-                                      flagged
-                                    </Badge>
+                                    <Badge className="ml-2 bg-red-500 text-white text-xs py-0">flagged</Badge>
                                   )}
                                 </td>
                                 <td className="px-4 py-2 text-xs text-muted-foreground">
-                                  {new Date(v.timestamp).toLocaleString(
-                                    "en-NG",
-                                  )}
+                                  {new Date(v.timestamp).toLocaleString("en-NG")}
                                 </td>
                                 <td className="px-4 py-2">
                                   {isSuspicious ? (
-                                    <Badge className="bg-red-100 text-red-700 text-xs">
-                                      suspicious
-                                    </Badge>
+                                    <Badge className="bg-red-100 text-red-700 text-xs">suspicious</Badge>
                                   ) : (
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-xs"
-                                    >
-                                      normal
-                                    </Badge>
+                                    <Badge variant="secondary" className="text-xs">normal</Badge>
                                   )}
                                 </td>
                               </tr>

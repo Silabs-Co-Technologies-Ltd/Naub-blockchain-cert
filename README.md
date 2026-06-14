@@ -87,7 +87,7 @@ Build a secure, auditable, and NDPR-aligned digital certificate platform where:
 
 - Smart contract controls include role gates, pausability, and secure modifiers.
 - Backend routes apply authentication, authorization, validation, and anti-abuse checks.
-- Secrets such as RPC URLs, Pinata keys, and wallet private keys are stored as Vercel environment variables.
+- Secrets such as RPC URLs, Pinata keys, Gemini keys, and wallet private keys are stored as Vercel environment variables.
 - Recommended checks include unit tests, integration tests, dependency scanning, and smart contract static analysis.
 
 ### Privacy and NDPR Compliance
@@ -106,7 +106,7 @@ Build a secure, auditable, and NDPR-aligned digital certificate platform where:
 
 ### Maintainability
 
-- Code is organized into UI, API routes, storage, certificate utilities, and blockchain adapter modules.
+- Code is organized into UI, API routes, storage, certificate utilities, AI helpers, and blockchain adapter modules.
 - Contract ABI changes should be versioned.
 - CI/CD should run linting, type checks, and production builds before deployment.
 
@@ -118,7 +118,7 @@ Build a secure, auditable, and NDPR-aligned digital certificate platform where:
 - Blockchain transaction/hash fields for anchored records.
 - Revocation workflow and status-aware verification.
 - QR code support for certificate sharing.
-- Chapter-aligned dashboards for issuance counts, verification volume, revocation status, audit activity, and security anomaly review.
+- AI-assisted verification summaries, dashboard insights, certificate support guidance, and anomaly review with fallback text when no API key is configured.
 
 ## 6) Vercel Deployment Blueprint
 
@@ -132,6 +132,7 @@ Build a secure, auditable, and NDPR-aligned digital certificate platform where:
 ### Recommended Vercel Environment Variables
 
 ```bash
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_key
 NEXT_PUBLIC_APP_URL=https://your-vercel-domain.vercel.app
 RPC_URL=your_ethereum_or_polygon_rpc_url
 PRIVATE_KEY=issuer_wallet_private_key_for_demo_only

@@ -1,84 +1,84 @@
-"use client";
+"use client"
 
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Camera, X } from "lucide-react";
-import jsQR from "jsqr";
+import { useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Camera, X } from "lucide-react"
+import jsQR from "jsqr"
 
 interface QRScannerProps {
-  onScan: (data: string) => void;
-  onClose: () => void;
+  onScan: (data: string) => void
+  onClose: () => void
 }
 
 export function QRScanner({ onScan, onClose }: QRScannerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isScanning, setIsScanning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const animationFrameRef = useRef<number>()
 
   useEffect(() => {
-    startCamera();
+    startCamera()
     return () => {
-      stopCamera();
-    };
-  }, []);
+      stopCamera()
+    }
+  }, [])
 
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
-      });
+      })
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setIsScanning(true);
-        scanQRCode();
+        videoRef.current.srcObject = stream
+        videoRef.current.play()
+        setIsScanning(true)
+        scanQRCode()
       }
     } catch (err) {
-      setError("Unable to access camera. Please check permissions.");
-      console.error("[v0] Camera access error:", err);
+      setError("Unable to access camera. Please check permissions.")
+      console.error("[v0] Camera access error:", err)
     }
-  };
+  }
 
   const stopCamera = () => {
     if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
+      const stream = videoRef.current.srcObject as MediaStream
+      stream.getTracks().forEach((track) => track.stop())
     }
     if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
+      cancelAnimationFrame(animationFrameRef.current)
     }
-  };
+  }
 
   const scanQRCode = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) return
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext("2d")
 
-    if (!context) return;
+    if (!context) return
 
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      const code = jsQR(imageData.data, imageData.width, imageData.height)
 
       if (code) {
-        onScan(code.data);
-        stopCamera();
-        return;
+        onScan(code.data)
+        stopCamera()
+        return
       }
     }
 
-    animationFrameRef.current = requestAnimationFrame(scanQRCode);
-  };
+    animationFrameRef.current = requestAnimationFrame(scanQRCode)
+  }
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -99,12 +99,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             </div>
           ) : (
             <div className="relative">
-              <video
-                ref={videoRef}
-                className="w-full rounded-lg"
-                playsInline
-                muted
-              />
+              <video ref={videoRef} className="w-full rounded-lg" playsInline muted />
               <canvas ref={canvasRef} className="hidden" />
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -120,5 +115,5 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
