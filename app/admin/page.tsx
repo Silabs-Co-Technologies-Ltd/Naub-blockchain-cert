@@ -12,50 +12,90 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Lock, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Wallet, ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
 import { NaubBrand } from "@/components/naub-brand";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 export default function AdminLoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConnectAndSignIn = async () => {
+    if (typeof window === "undefined" || !window.ethereum) {
+      toast({
+        title: "Wallet not found",
+        description: "Please install MetaMask to access the NAUB Registry Portal.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/admin/login", {
+      // Step 1: connect wallet
+      const accounts: string[] = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const address = accounts[0];
+      setWalletAddress(address);
+
+      // Step 2: request a nonce for this wallet
+      const nonceRes = await fetch("/api/admin/login?step=nonce", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ walletAddress: address }),
+      });
+      const nonceData = await nonceRes.json();
+      if (!nonceRes.ok) throw new Error(nonceData.error || "Failed to obtain nonce");
+
+      // Step 3: sign the nonce with EIP-191 personal_sign
+      const signature: string = await window.ethereum.request({
+        method: "personal_sign",
+        params: [nonceData.nonce, address],
       });
 
-      const data = await response.json();
+      // Step 4: submit signature to verify and receive a JWT
+      const loginRes = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress: address,
+          signature,
+          nonce: nonceData.nonce,
+        }),
+      });
+      const loginData = await loginRes.json();
 
-      if (response.ok) {
+      if (loginRes.ok) {
+        sessionStorage.setItem("naub_jwt", loginData.token);
+        sessionStorage.setItem("naub_role", loginData.role);
+        sessionStorage.setItem("naub_wallet", loginData.walletAddress);
         toast({
-          title: "Login Successful",
-          description: "Welcome to NAUB Admin Dashboard",
+          title: "Signed in",
+          description: `Connected as ${loginData.role} (${address.slice(0, 6)}...${address.slice(-4)})`,
         });
         router.push("/admin/dashboard");
       } else {
         toast({
-          title: "Login Failed",
-          description: data.error || "Invalid credentials",
+          title: "Sign-in failed",
+          description: loginData.error || "Wallet is not authorised on the CertificateRegistry contract",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "An error occurred during login",
+        description: error?.message || "An error occurred during wallet sign-in",
         variant: "destructive",
       });
     } finally {
@@ -78,50 +118,32 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-<NaubBrand title="NAUB Registry Portal" subtitle="Super Admin / Registry Admin access" />
+            <NaubBrand title="NAUB Registry Portal" subtitle="Super Admin / Registry Admin access" />
           </div>
           <div>
-            <CardTitle className="text-2xl flex items-center justify-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Role-Based Access</CardTitle>
+            <CardTitle className="text-2xl flex items-center justify-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Wallet-Based Access</CardTitle>
             <CardDescription>
-              Sign in to issue, revoke, and monitor NAUB blockchain degree certificates
+              Sign in with your registered Ethereum wallet to issue, revoke, and monitor NAUB blockchain degree certificates
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Email Address</Label>
-              <Input
-                id="username"
-                type="email"
-                placeholder="admin@naub.edu.ng"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full gap-2" disabled={isLoading}>
-              <Lock className="h-4 w-4" />
-              {isLoading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground text-center">
-              Demo Credentials:
+        <CardContent className="space-y-4">
+          <Button onClick={handleConnectAndSignIn} className="w-full gap-2" disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+            {isLoading ? "Connecting..." : "Connect Wallet & Sign In"}
+          </Button>
+
+          {walletAddress && (
+            <p className="break-all rounded bg-muted p-3 text-center font-mono text-xs text-muted-foreground">
+              {walletAddress}
             </p>
-            <p className="text-sm font-mono text-center mt-1">
-              admin@naub.edu.ng / admin123
+          )}
+
+          <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+            <p>
+              Sign-in uses an EIP-191 message signature — no password is stored. Your wallet must hold the{" "}
+              <strong>SUPERADMIN_ROLE</strong> or <strong>CERTIFICATE_ROLE</strong> on the CertificateRegistry smart
+              contract.
             </p>
           </div>
         </CardContent>

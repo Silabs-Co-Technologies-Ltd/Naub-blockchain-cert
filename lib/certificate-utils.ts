@@ -5,10 +5,6 @@ export function generateCertificateId(): string {
   return `NAUB-${year}-${timestamp}${random}`;
 }
 
-export function isCertificateExpired(expiryDate: string): boolean {
-  return new Date(expiryDate) < new Date();
-}
-
 export function formatDate(date: string): string {
   return new Date(date).toLocaleDateString("en-NG", {
     year: "numeric",
@@ -21,8 +17,6 @@ export function getCertificateStatusColor(status: string): string {
   switch (status) {
     case "valid":
       return "text-primary bg-accent";
-    case "expired":
-      return "text-yellow-600 bg-yellow-50";
     case "revoked":
       return "text-red-600 bg-red-50";
     default:
@@ -30,6 +24,7 @@ export function getCertificateStatusColor(status: string): string {
   }
 }
 
+// Degree programmes offered at NAUB
 export const certificateCategories = [
   "B.Sc. Computer Science",
   "B.Sc. Cyber Security",
@@ -51,21 +46,26 @@ export const degreeClasses = [
   "Pass",
 ];
 
+/**
+ * Canonical certificate payload for SHA-256 hashing.
+ * All eight required fields are concatenated in a fixed order.
+ * The browser uses this same order via the Web Crypto API (SubtleCrypto).
+ */
 export function canonicalCertificatePayload(fields: {
-  companyName: string;
+  studentName: string;
   matriculationNumber: string;
   dateOfBirth: string;
-  category: string;
+  programmeOfStudy: string;
   classOfDegree: string;
   dateOfAward: string;
   certificateNumber: string;
   viceChancellor: string;
 }) {
   return [
-    fields.companyName.trim().toUpperCase(),
+    fields.studentName.trim().toUpperCase(),
     fields.matriculationNumber.trim().toUpperCase(),
     fields.dateOfBirth,
-    fields.category.trim().toUpperCase(),
+    fields.programmeOfStudy.trim().toUpperCase(),
     fields.classOfDegree.trim().toUpperCase(),
     fields.dateOfAward,
     fields.certificateNumber.trim().toUpperCase(),
@@ -73,6 +73,11 @@ export function canonicalCertificatePayload(fields: {
   ].join("|");
 }
 
+/**
+ * Canonical holder identity payload for SHA-256 hashing.
+ * Used to produce the anonymised holderIdentityHash stored on-chain
+ * in compliance with NDPR data minimisation requirements.
+ */
 export function canonicalHolderPayload(fullName: string, dateOfBirth: string) {
   return `${fullName.trim().toUpperCase()}|${dateOfBirth}`;
 }

@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -54,32 +53,26 @@ export default function IssueCertificatePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hashPreview, setHashPreview] = useState<{ certificateHash: string; holderIdentityHash: string } | null>(null);
   const [formData, setFormData] = useState({
-    companyName: "",
+    studentName: "",
     matriculationNumber: "",
     dateOfBirth: "",
-    category: "",
+    programmeOfStudy: "",
     classOfDegree: "",
     dateOfAward: "",
     certificateNumber: "",
     viceChancellor: "",
-    email: "",
-    phone: "",
-    address: "",
     ipfsCid: "",
   });
 
   const requiredFields = [
-    formData.companyName,
+    formData.studentName,
     formData.matriculationNumber,
     formData.dateOfBirth,
-    formData.category,
+    formData.programmeOfStudy,
     formData.classOfDegree,
     formData.dateOfAward,
     formData.certificateNumber,
     formData.viceChancellor,
-    formData.email,
-    formData.phone,
-    formData.address,
   ];
 
   const computeHashes = async () => {
@@ -95,7 +88,7 @@ export default function IssueCertificatePage() {
 
     const certificateHash = await sha256Hex(canonicalCertificatePayload(formData));
     const holderIdentityHash = await sha256Hex(
-      canonicalHolderPayload(formData.companyName, formData.dateOfBirth),
+      canonicalHolderPayload(formData.studentName, formData.dateOfBirth),
     );
     const hashes = { certificateHash, holderIdentityHash };
     setHashPreview(hashes);
@@ -108,7 +101,10 @@ export default function IssueCertificatePage() {
 
     try {
       const hashes = await computeHashes();
-      if (!hashes) return;
+      if (!hashes) {
+        setIsLoading(false);
+        return;
+      }
 
       const response = await fetch("/api/certificates/issue", {
         method: "POST",
@@ -116,8 +112,7 @@ export default function IssueCertificatePage() {
         body: JSON.stringify({
           ...formData,
           ...hashes,
-          validityYears: "99",
-          certificateType: "Degree Certificate",
+          certificateType: "DEGREE",
           institutionName: "Nigerian Army University Biu",
         }),
       });
@@ -173,15 +168,15 @@ export default function IssueCertificatePage() {
           <CardHeader>
             <CardTitle>NAUB Degree Certificate Details</CardTitle>
             <CardDescription>
-              Complete the academic fields specified in Chapter 3 before the browser computes the SHA-256 hashes and submits the registry transaction.
+              Complete the eight academic fields specified in Chapter 3 before the browser computes the SHA-256 hashes and submits the registry transaction.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-8">
               <section className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="companyName">Student / Graduate Full Name *</Label>
-                  <Input id="companyName" placeholder="e.g., Amina Yusuf" value={formData.companyName} onChange={(e) => handleChange("companyName", e.target.value)} required />
+                  <Label htmlFor="studentName">Student / Graduate Full Name *</Label>
+                  <Input id="studentName" placeholder="e.g., Amina Yusuf" value={formData.studentName} onChange={(e) => handleChange("studentName", e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="matriculationNumber">Matriculation Number *</Label>
@@ -192,10 +187,10 @@ export default function IssueCertificatePage() {
                   <Input id="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={(e) => handleChange("dateOfBirth", e.target.value)} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Programme of Study *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleChange("category", value)} required>
-                    <SelectTrigger id="category"><SelectValue placeholder="Select programme" /></SelectTrigger>
-                    <SelectContent>{certificateCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent>
+                  <Label htmlFor="programmeOfStudy">Programme of Study *</Label>
+                  <Select value={formData.programmeOfStudy} onValueChange={(value) => handleChange("programmeOfStudy", value)} required>
+                    <SelectTrigger id="programmeOfStudy"><SelectValue placeholder="Select programme" /></SelectTrigger>
+                    <SelectContent>{certificateCategories.map((programme) => <SelectItem key={programme} value={programme}>{programme}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -216,21 +211,6 @@ export default function IssueCertificatePage() {
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="viceChancellor">Vice Chancellor&apos;s Name *</Label>
                   <Input id="viceChancellor" placeholder="Name of Vice Chancellor" value={formData.viceChancellor} onChange={(e) => handleChange("viceChancellor", e.target.value)} required />
-                </div>
-              </section>
-
-              <section className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Holder Email *</Label>
-                  <Input id="email" type="email" placeholder="student.name@naub.edu.ng" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input id="phone" type="tel" placeholder="+234-XXX-XXX-XXXX" value={formData.phone} onChange={(e) => handleChange("phone", e.target.value)} required />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Contact Address *</Label>
-                  <Textarea id="address" placeholder="Student or alumni contact address" value={formData.address} onChange={(e) => handleChange("address", e.target.value)} required rows={3} />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="ipfsCid">IPFS CID / Pinata Reference</Label>

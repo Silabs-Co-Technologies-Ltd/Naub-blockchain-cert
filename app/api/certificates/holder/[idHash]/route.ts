@@ -7,18 +7,22 @@ export async function GET(
 ) {
   const { idHash } = await params;
   const certificates = await database.getAllCertificates();
+
+  // Return only public-safe fields — no personal data (NDPR compliance)
   const holderCertificates = certificates
-    .filter((certificate) => certificate.holderIdentityHash === idHash)
-    .map((certificate) => ({
-      id: certificate.id,
-      companyName: certificate.companyName,
-      category: certificate.category,
-      classOfDegree: certificate.classOfDegree,
-      dateOfAward: certificate.dateOfAward,
-      status: certificate.status,
-      blockchainHash: certificate.blockchainHash,
-      ipfsCid: certificate.ipfsCid,
-      certificateNumber: certificate.certificateNumber,
+    .filter((cert) => cert.holderIdentityHash === idHash)
+    .map((cert) => ({
+      id: cert.id,
+      programmeOfStudy: cert.programmeOfStudy,
+      classOfDegree: cert.classOfDegree,
+      dateOfAward: cert.dateOfAward,
+      status: cert.status,
+      blockchainHash: cert.blockchainHash,
+      ipfsCid: cert.ipfsCid,
+      certificateNumber: cert.certificateNumber,
+      institutionName: cert.institutionName,
+      revocationReason: cert.revocationReason,
+      revokedAt: cert.revokedAt,
     }));
 
   return NextResponse.json({ certificates: holderCertificates });

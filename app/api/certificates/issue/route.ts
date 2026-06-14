@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { database } from "@/lib/database";
 import { blockchain } from "@/lib/blockchain";
-import { generateCertificateId } from "@/lib/certificate-utils";
+import { generateCertificateId, canonicalCertificatePayload, canonicalHolderPayload } from "@/lib/certificate-utils";
 import type { Certificate } from "@/lib/database";
 import crypto from "crypto";
 
@@ -9,162 +9,111 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      companyName,
-      category,
-      email,
-      phone,
-      address,
-      validityYears,
+      studentName,
       matriculationNumber,
       dateOfBirth,
+      programmeOfStudy,
       classOfDegree,
       dateOfAward,
       certificateNumber,
       viceChancellor,
-      holderIdentityHash,
       ipfsCid,
       institutionName = "Nigerian Army University Biu",
-      certificateType = "Degree Certificate",
-      certificateHash,
+      certificateType = "DEGREE",
+      certificateHash,    // SHA-256 hash computed in browser via Web Crypto API
+      holderIdentityHash, // SHA-256 hash of studentName + dateOfBirth (NDPR-safe)
     } = body;
 
-    // Validate required fields
+    // Validate all eight required certificate fields
     if (
-      !companyName ||
-      !category ||
-      !email ||
-      !phone ||
-      !address ||
-      !validityYears ||
+      !studentName ||
       !matriculationNumber ||
       !dateOfBirth ||
+      !programmeOfStudy ||
       !classOfDegree ||
       !dateOfAward ||
       !certificateNumber ||
       !viceChancellor
     ) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields: studentName, matriculationNumber, dateOfBirth, programmeOfStudy, classOfDegree, dateOfAward, certificateNumber, viceChancellor" },
         { status: 400 }
       );
     }
 
-    // Generate certificate ID
     const certificateId = generateCertificateId();
-
-    // Calculate dates
     const dateIssued = new Date().toISOString().split("T")[0];
-    const dateExpiry = new Date(
-      Date.now() + Number.parseInt(validityYears) * 365 * 24 * 60 * 60 * 1000
-    )
-      .toISOString()
-      .split("T")[0];
 
-    // Create certificate data for blockchain
-    const certificateData = JSON.stringify({
-      id: certificateId,
-      companyName,
-      matriculationNumber,
-      dateOfBirth,
-      category,
-      classOfDegree,
-      dateOfAward,
-      certificateNumber,
-      viceChancellor,
-      institutionName,
-      certificateType,
-      ipfsCid: ipfsCid || `ipfs://demo-${certificateId}`,
-      dateIssued,
-      dateExpiry,
-    });
+    // If the browser did not send a pre-computed hash, generate it server-side
+    const finalCertHash =
+      certificateHash ||
+      "0x" +
+        crypto
+          .createHash("sha256")
+          .update(
+            canonicalCertificatePayload({
+              studentName,
+              matriculationNumber,
+              dateOfBirth,
+              programmeOfStudy,
+              classOfDegree,
+              dateOfAward,
+              certificateNumber,
+              viceChancellor,
+            })
+          )
+          .digest("hex");
 
-    // Write to blockchain
+    // Derive holderIdentityHash if not supplied by client
+    const finalHolderHash =
+      holderIdentityHash ||
+      crypto
+        .createHash("sha256")
+        .update(canonicalHolderPayload(studentName, dateOfBirth))
+        .digest("hex");
+
+    // Write certificate hash to blockchain
     let blockchainRecord;
     try {
-      blockchainRecord = await blockchain.writeCertificateHash(certificateHash || certificateData);
-      console.log(`[API] Blockchain result:`, blockchainRecord);
+      blockchainRecord = await blockchain.writeCertificateHash(finalCertHash);
     } catch (blockchainError) {
       console.error(`[API] Blockchain error:`, blockchainError);
-      // Continue with simulation mode - don't fail the entire request
       blockchainRecord = {
-        transactionHash: `sim_${Date.now()}_${Math.random()
-          .toString(36)
-          .substr(2, 9)}`,
+        transactionHash: `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         blockNumber: Math.floor(Math.random() * 1000000) + 1000000,
         timestamp: Date.now(),
-        certificateHash: certificateHash || crypto
-          .createHash("sha256")
-          .update(certificateData)
-          .digest("hex"),
+        certificateHash: finalCertHash,
       };
-      console.log(`[API] Using simulated blockchain record:`, blockchainRecord);
     }
 
-    // Create certificate in database
     const certificate: Certificate = {
       id: certificateId,
-      companyName,
-      category,
-      dateIssued,
-      dateExpiry,
-      status: "valid",
+      studentName,
       matriculationNumber,
       dateOfBirth,
+      programmeOfStudy,
       classOfDegree,
       dateOfAward,
       certificateNumber,
       viceChancellor,
-      holderIdentityHash,
+      holderIdentityHash: finalHolderHash,
       ipfsCid: ipfsCid || `ipfs://demo-${certificateId}`,
       institutionName,
       certificateType,
+      dateIssued,
+      status: "valid",
       blockchainHash: blockchainRecord.certificateHash,
       transactionHash: blockchainRecord.transactionHash,
       blockNumber: blockchainRecord.blockNumber,
-      email,
-      phone,
-      address,
     };
 
-    console.log(`[API] Saving certificate to database:`, certificate);
     await database.createCertificate(certificate);
-    console.log(`[API] Certificate saved to database`);
-
-    // Verify the certificate was created
-    const createdCert = await database.getCertificate(certificateId);
-    console.log(
-      `[API] Certificate created: ${certificateId}, Found: ${
-        createdCert ? "Yes" : "No"
-      }`
-    );
-
-    if (!createdCert) {
-      console.error(
-        `[API] CRITICAL: Certificate ${certificateId} was not found after creation!`
-      );
-      // Try to get all certificates to debug
-      const allCerts = await database.getAllCertificates();
-      console.log(
-        `[API] All certificates after creation:`,
-        allCerts.map((c) => c.id)
-      );
-    }
 
     return NextResponse.json({ success: true, certificate });
   } catch (error) {
     console.error("[API] Error issuing certificate:", error);
-
-    // Provide more specific error messages
-    let errorMessage = "Failed to issue certificate";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-
     return NextResponse.json(
-      {
-        error: errorMessage,
-        details: error instanceof Error ? error.stack : String(error),
-      },
+      { error: error instanceof Error ? error.message : "Failed to issue certificate" },
       { status: 500 }
     );
   }
