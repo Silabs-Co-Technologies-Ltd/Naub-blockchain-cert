@@ -3,7 +3,7 @@ import { database } from "@/lib/database";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -13,7 +13,7 @@ export async function GET(
     const allCerts = await database.getAllCertificates();
     console.log(`[API] Total certificates in database: ${allCerts.length}`);
     console.log(
-      `[API] Certificate IDs: ${allCerts.map((c) => c.id).join(", ")}`
+      `[API] Certificate IDs: ${allCerts.map((c) => c.id).join(", ")}`,
     );
 
     const certificate = await database.getCertificate(id);
@@ -22,7 +22,7 @@ export async function GET(
       console.log(`[API] Certificate ${id} not found in database`);
       return NextResponse.json(
         { error: "Certificate not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function GET(
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch certificate" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
