@@ -4,48 +4,55 @@ import { blockchain } from "@/lib/blockchain";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  let id = "";
   try {
-    const { id } = await params;
+    ({ id } = await params);
     console.log(`[Verify API] Verifying certificate: ${id}`);
     console.log(`[Verify API] Request URL: ${request.url}`);
 
     const normalizedHash = id.startsWith("0x") ? id : `0x${id}`;
     const certificateById = await database.getCertificate(id);
-    const certificate = certificateById || (await database.getAllCertificates()).find(
-      (cert) => cert.blockchainHash === id || cert.blockchainHash === normalizedHash || cert.certificateNumber === id,
-    ) || null;
+    const certificate =
+      certificateById ||
+      (await database.getAllCertificates()).find(
+        (cert) =>
+          cert.blockchainHash === id ||
+          cert.blockchainHash === normalizedHash ||
+          cert.certificateNumber === id,
+      ) ||
+      null;
 
     if (!certificate) {
       console.log(`[Verify API] Certificate not found in database: ${id}`);
       return NextResponse.json(
         { error: "Certificate not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     console.log(
-      `[Verify API] Certificate found, blockchain hash: ${certificate.blockchainHash}`
+      `[Verify API] Certificate found, blockchain hash: ${certificate.blockchainHash}`,
     );
 
     // Verify blockchain hash
     const blockchainRecord = await blockchain.verifyCertificateHash(
-      certificate.blockchainHash
+      certificate.blockchainHash,
     );
 
     if (!blockchainRecord) {
       console.log(
-        `[Verify API] Blockchain record not found for hash: ${certificate.blockchainHash}`
+        `[Verify API] Blockchain record not found for hash: ${certificate.blockchainHash}`,
       );
       return NextResponse.json(
         { error: "Certificate not found on blockchain" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     console.log(
-      `[Verify API] Blockchain verification successful: ${blockchainRecord.transactionHash}`
+      `[Verify API] Blockchain verification successful: ${blockchainRecord.transactionHash}`,
     );
 
     // Prepare blockchain verification response
@@ -78,7 +85,7 @@ export async function GET(
         error: "Failed to verify certificate",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

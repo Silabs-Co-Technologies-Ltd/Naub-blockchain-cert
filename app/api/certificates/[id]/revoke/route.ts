@@ -5,10 +5,11 @@ import crypto from "crypto";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  let id = "";
   try {
-    const { id } = await params;
+    ({ id } = await params);
     console.log(`[Revoke API] Revoking certificate: ${id}`);
 
     const certificate = await database.getCertificate(id);
@@ -17,7 +18,7 @@ export async function POST(
       console.log(`[Revoke API] Certificate not found: ${id}`);
       return NextResponse.json(
         { error: "Certificate not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -33,12 +34,11 @@ export async function POST(
     console.log(`[Revoke API] Recording revocation on blockchain for: ${id}`);
 
     // Record revocation on blockchain
-    const blockchainRecord = await blockchain.writeCertificateHash(
-      revocationData
-    );
+    const blockchainRecord =
+      await blockchain.writeCertificateHash(revocationData);
 
     console.log(
-      `[Revoke API] Blockchain revocation recorded: ${blockchainRecord.transactionHash}`
+      `[Revoke API] Blockchain revocation recorded: ${blockchainRecord.transactionHash}`,
     );
 
     // Update certificate status and add revocation blockchain record
@@ -64,7 +64,7 @@ export async function POST(
         error: "Failed to revoke certificate",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
