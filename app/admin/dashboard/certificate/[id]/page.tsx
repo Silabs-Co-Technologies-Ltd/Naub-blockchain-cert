@@ -12,20 +12,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Shield,
   ExternalLink,
   AlertCircle,
   CheckCircle,
-  Clock,
   Download,
   QrCode,
-  Brain,
-  Mail,
-  Copy,
-  Loader2,
-  Sparkles,
 } from "lucide-react";
 import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
 import type { Certificate } from "@/lib/database";
@@ -33,22 +28,16 @@ import { useToast } from "@/hooks/use-toast";
 import { QRCodeGenerator } from "@/components/qr-code-generator";
 import { CertificateDownload } from "@/components/certificate-download";
 
-interface LifecycleNotice {
-  subject: string;
-  body: string;
-}
-
 export default function CertificateDetailPage() {
   const params = useParams();
   const { toast } = useToast();
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRevoking, setIsRevoking] = useState(false);
+  const [showRevokeForm, setShowRevokeForm] = useState(false);
+  const [revocationReason, setRevocationReason] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const [isDraftingNotice, setIsDraftingNotice] = useState(false);
-  const [lifecycleNotice, setLifecycleNotice] = useState<LifecycleNotice | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -89,11 +78,12 @@ export default function CertificateDetailPage() {
   };
 
   const handleRevoke = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to revoke this certificate? This action cannot be undone."
-      )
-    ) {
+    if (!revocationReason.trim()) {
+      toast({
+        title: "Reason required",
+        description: "A revocation reason is required and is permanently recorded on the blockchain (FR-09).",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -101,6 +91,8 @@ export default function CertificateDetailPage() {
     try {
       const response = await fetch(`/api/certificates/${params.id}/revoke`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: revocationReason.trim() }),
       });
 
       if (response.ok) {
@@ -108,11 +100,14 @@ export default function CertificateDetailPage() {
           title: "Certificate Revoked",
           description: "The certificate has been successfully revoked",
         });
+        setShowRevokeForm(false);
+        setRevocationReason("");
         loadCertificate();
       } else {
+        const data = await response.json().catch(() => ({}));
         toast({
           title: "Error",
-          description: "Failed to revoke certificate",
+          description: data.error || "Failed to revoke certificate",
           variant: "destructive",
         });
       }
@@ -136,47 +131,6 @@ export default function CertificateDetailPage() {
       link.href = url;
       link.click();
     }
-  };
-
-  const handleDraftLifecycleNotice = async () => {
-    if (!certificate) return;
-    setIsDraftingNotice(true);
-    setLifecycleNotice(null);
-
-    try {
-      const res = await fetch("/api/admin/draft-renewal-notice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ certificate }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setLifecycleNotice(data);
-      } else {
-        toast({
-          title: "Draft Failed",
-          description: "Could not draft the certificate lifecycle notice. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch {
-      toast({
-        title: "Error",
-        description: "Service unavailable. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDraftingNotice(false);
-    }
-  };
-
-  const handleCopyNotice = () => {
-    if (!lifecycleNotice) return;
-    navigator.clipboard.writeText(
-      `Subject: ${lifecycleNotice.subject}\n\n${lifecycleNotice.body}`
-    );
-    toast({ title: "Copied to clipboard" });
   };
 
   if (isLoading) {
@@ -214,9 +168,6 @@ export default function CertificateDetailPage() {
     typeof window !== "undefined" ? window.location.origin : ""
   }/verify?id=${certificate.id}`;
 
-  const needsLifecycleAction =
-    certificate.status === "expired" || certificate.status === "revoked";
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -253,19 +204,6 @@ export default function CertificateDetailPage() {
               </div>
             </div>
           )}
-          {certificate.status === "expired" && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
-              <Clock className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="font-semibold text-yellow-900">
-                  Certificate Expired
-                </p>
-                <p className="text-sm text-yellow-700">
-                  This certificate has passed its expiry date
-                </p>
-              </div>
-            </div>
-          )}
           {certificate.status === "revoked" && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
               <AlertCircle className="h-5 w-5 text-red-600" />
@@ -290,25 +228,21 @@ export default function CertificateDetailPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Student / Graduate Name</p>
-                <p className="font-semibold">{certificate.companyName}</p>
+                <p className="font-semibold">{certificate.studentName}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Programme / Department
+                  Programme of Study
                 </p>
-                <p className="font-semibold">{certificate.category}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-semibold">{certificate.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-semibold">{certificate.phone}</p>
+                <p className="font-semibold">{certificate.programmeOfStudy}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Matriculation Number</p>
                 <p className="font-semibold">{certificate.matriculationNumber || "Not recorded"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Date of Birth</p>
+                <p className="font-semibold">{certificate.dateOfBirth ? formatDate(certificate.dateOfBirth) : "Not recorded"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Class of Degree</p>
@@ -326,6 +260,10 @@ export default function CertificateDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Certificate ID</p>
                 <p className="font-mono font-semibold">{certificate.id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Certificate Number</p>
+                <p className="font-semibold">{certificate.certificateNumber}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
@@ -347,6 +285,10 @@ export default function CertificateDetailPage() {
                   {formatDate(certificate.dateOfAward || certificate.dateIssued)}
                 </p>
               </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Vice Chancellor</p>
+                <p className="font-semibold">{certificate.viceChancellor}</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -355,7 +297,7 @@ export default function CertificateDetailPage() {
             <CardHeader>
               <CardTitle>Blockchain Verification</CardTitle>
               <CardDescription>
-                Immutable record on the blockchain
+                Immutable record on the Ethereum Sepolia blockchain
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -389,6 +331,15 @@ export default function CertificateDetailPage() {
                 </p>
               </div>
 
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Holder Identity Hash (NDPR-safe lookup key)
+                </p>
+                <p className="font-mono text-sm break-all bg-muted p-2 rounded">
+                  {certificate.holderIdentityHash}
+                </p>
+              </div>
+
               {certificate.status === "revoked" &&
                 certificate.revocationTxHash && (
                   <div className="border-t pt-4">
@@ -412,8 +363,13 @@ export default function CertificateDetailPage() {
                     </p>
                     <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                       Revoked:{" "}
-                      {new Date(certificate.revokedAt!).toLocaleString()}
+                      {certificate.revokedAt ? new Date(certificate.revokedAt).toLocaleString() : "Unknown"}
                     </p>
+                    {certificate.revocationReason && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        Reason: {certificate.revocationReason}
+                      </p>
+                    )}
                   </div>
                 )}
             </CardContent>
@@ -454,101 +410,61 @@ export default function CertificateDetailPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* AI Certificate Lifecycle Notice — only for expired/revoked */}
-          {needsLifecycleAction && (
-            <Card className="md:col-span-2 border-blue-200">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-primary" />
-                    AI Certificate Lifecycle Notice
-                    <Badge variant="secondary" className="text-xs">
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      Gemini
-                    </Badge>
-                  </CardTitle>
-                  <Button
-                    variant="outline"
-                    onClick={handleDraftLifecycleNotice}
-                    disabled={isDraftingNotice}
-                    className="gap-2"
-                  >
-                    {isDraftingNotice ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Drafting...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="h-4 w-4" />
-                        Draft Certificate Lifecycle Notice
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <CardDescription>
-                  Generate an AI-drafted certificate lifecycle notice email to send to{" "}
-                  {certificate.companyName}
-                </CardDescription>
-              </CardHeader>
-              {lifecycleNotice && (
-                <CardContent>
-                  <div className="space-y-4 bg-muted rounded-lg p-4">
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                        Subject
-                      </p>
-                      <p className="font-medium">{lifecycleNotice.subject}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                        Body
-                      </p>
-                      <pre className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                        {lifecycleNotice.body}
-                      </pre>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCopyNotice}
-                        className="gap-2"
-                      >
-                        <Copy className="h-4 w-4" />
-                        Copy to Clipboard
-                      </Button>
-                      <a
-                        href={`mailto:${certificate.email}?subject=${encodeURIComponent(lifecycleNotice.subject)}&body=${encodeURIComponent(lifecycleNotice.body)}`}
-                      >
-                        <Button size="sm" className="gap-2">
-                          <Mail className="h-4 w-4" />
-                          Open in Email Client
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          )}
         </div>
 
         {/* Actions */}
-        <div className="mt-6 flex gap-4">
-          <CertificateDownload
-            certificate={certificate}
-            qrCodeDataUrl={qrCodeDataUrl}
-          />
-          {certificate.status === "valid" && (
-            <Button
-              variant="destructive"
-              onClick={handleRevoke}
-              disabled={isRevoking}
-            >
-              {isRevoking ? "Revoking..." : "Revoke Certificate"}
-            </Button>
+        <div className="mt-6 space-y-4">
+          <div className="flex gap-4">
+            <CertificateDownload
+              certificate={certificate}
+              qrCodeDataUrl={qrCodeDataUrl}
+            />
+            {certificate.status === "valid" && !showRevokeForm && (
+              <Button
+                variant="destructive"
+                onClick={() => setShowRevokeForm(true)}
+              >
+                Revoke Certificate
+              </Button>
+            )}
+          </div>
+
+          {showRevokeForm && (
+            <Card className="border-red-200">
+              <CardHeader>
+                <CardTitle className="text-red-700">Revoke certificate</CardTitle>
+                <CardDescription>
+                  Per FR-09, a reason is mandatory and will be permanently recorded on the blockchain alongside this revocation.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  placeholder="e.g., Issued in error — duplicate record; certificate replaced by NAUB/CERT/2026/0042"
+                  value={revocationReason}
+                  onChange={(e) => setRevocationReason(e.target.value)}
+                  rows={3}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    onClick={handleRevoke}
+                    disabled={isRevoking}
+                  >
+                    {isRevoking ? "Revoking..." : "Confirm Revocation"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowRevokeForm(false);
+                      setRevocationReason("");
+                    }}
+                    disabled={isRevoking}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>

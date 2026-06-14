@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { database } from "@/lib/database";
 import { blockchain } from "@/lib/blockchain";
-import crypto from "crypto";
 
 export async function POST(
   request: Request,
@@ -9,44 +8,35 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    console.log(`[Revoke API] Revoking certificate: ${id}`);
+    const body = await request.json().catch(() => ({}));
+    const reason: string = body.reason || "Certificate revoked by NAUB Registry";
 
     const certificate = await database.getCertificate(id);
-
     if (!certificate) {
-      console.log(`[Revoke API] Certificate not found: ${id}`);
-      return NextResponse.json(
-        { error: "Certificate not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
     }
 
-    // Create revocation data for blockchain
+    if (certificate.status === "revoked") {
+      return NextResponse.json({ error: "Certificate is already revoked" }, { status: 400 });
+    }
+
+    // Record revocation on blockchain
     const revocationData = JSON.stringify({
       action: "REVOKE",
       certificateId: id,
       originalHash: certificate.blockchainHash,
       revokedAt: new Date().toISOString(),
-      reason: "Certificate revoked by NAUB",
+      reason,
     });
 
-    console.log(`[Revoke API] Recording revocation on blockchain for: ${id}`);
+    const blockchainRecord = await blockchain.writeCertificateHash(revocationData);
 
-    // Record revocation on blockchain
-    const blockchainRecord = await blockchain.writeCertificateHash(
-      revocationData
-    );
-
-    console.log(
-      `[Revoke API] Blockchain revocation recorded: ${blockchainRecord.transactionHash}`
-    );
-
-    // Update certificate status and add revocation blockchain record
     const updated = await database.updateCertificate(id, {
       status: "revoked",
       revocationTxHash: blockchainRecord.transactionHash,
       revocationBlockNumber: blockchainRecord.blockNumber,
       revokedAt: new Date().toISOString(),
+      revocationReason: reason,
     });
 
     return NextResponse.json({
@@ -58,12 +48,9 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error(`[Revoke API] Error revoking certificate ${id}:`, error);
+    console.error(`[Revoke API] Error:`, error);
     return NextResponse.json(
-      {
-        error: "Failed to revoke certificate",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: "Failed to revoke certificate" },
       { status: 500 }
     );
   }

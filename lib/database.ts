@@ -1,33 +1,34 @@
 // Database service that uses file storage for persistence
-// In production, this would use PostgreSQL/MongoDB
+// In production, this would use MongoDB
 
 export interface Certificate {
   id: string;
-  companyName: string;
-  category: string;
+  // Student identity fields (stored off-chain only — never written to blockchain)
+  studentName: string;
+  matriculationNumber: string;
+  dateOfBirth: string;
+  // Academic credential fields
+  programmeOfStudy: string;
+  classOfDegree: string;
+  dateOfAward: string;
+  certificateNumber: string;
+  viceChancellor: string;
+  // System fields
+  holderIdentityHash: string; // SHA-256 hash of studentName + dateOfBirth (NDPR-safe)
+  ipfsCid: string;
+  institutionName: string;
+  certificateType: string;
   dateIssued: string;
-  dateExpiry: string;
-  status: "valid" | "expired" | "revoked";
-  matriculationNumber?: string;
-  dateOfBirth?: string;
-  classOfDegree?: string;
-  dateOfAward?: string;
-  certificateNumber?: string;
-  viceChancellor?: string;
-  holderIdentityHash?: string;
-  ipfsCid?: string;
-  institutionName?: string;
-  certificateType?: string;
+  status: "valid" | "revoked";
+  // Blockchain fields
   blockchainHash: string;
   transactionHash: string;
   blockNumber: number;
-  email: string;
-  phone: string;
-  address: string;
   // Revocation fields (optional)
   revocationTxHash?: string;
   revocationBlockNumber?: number;
   revokedAt?: string;
+  revocationReason?: string;
 }
 
 export interface Verification {
@@ -40,13 +41,8 @@ export interface Verification {
 class DatabaseService {
   private static instance: DatabaseService;
   private fileStorage: any;
-  private adminCredentials = {
-    username: "admin@naub.edu.ng",
-    password: "admin123", // In production, use proper hashing
-  };
 
   private constructor() {
-    // Initialize file storage
     this.initializeStorage();
   }
 
@@ -62,16 +58,10 @@ class DatabaseService {
     const { blockchain } = await import("./blockchain");
     this.fileStorage = fileStorage;
     await this.fileStorage.initializeSampleData();
-
-    // Initialize blockchain records to ensure verification works
     blockchain.initializeSampleRecords();
-
-    // Reconcile all certificates with blockchain records
-    // This ensures orphaned certificates get blockchain records
     await blockchain.reconcileAllCertificates();
   }
 
-  // Certificate operations
   async createCertificate(cert: Certificate): Promise<Certificate> {
     console.log(`[Database] Creating certificate: ${cert.id}`);
     return await this.fileStorage.createCertificate(cert);
@@ -97,7 +87,6 @@ class DatabaseService {
     return await this.fileStorage.deleteCertificate(id);
   }
 
-  // Verification operations
   async logVerification(verification: Verification): Promise<void> {
     return await this.fileStorage.logVerification(verification);
   }
@@ -106,22 +95,32 @@ class DatabaseService {
     return await this.fileStorage.getVerifications();
   }
 
-  // Admin authentication
-  async verifyAdmin(username: string, password: string): Promise<boolean> {
-    return (
-      username === this.adminCredentials.username &&
-      password === this.adminCredentials.password
+  /**
+   * NDPR right-to-erasure: delete all off-chain personal data for a student.
+   * The on-chain hash record remains as an anonymous mathematical value.
+   */
+  async erasePersonalData(
+    matriculationNumber: string,
+    dateOfBirth: string,
+  ): Promise<{ deleted: number }> {
+    const all = await this.getAllCertificates();
+    const targets = all.filter(
+      (c) =>
+        c.matriculationNumber === matriculationNumber &&
+        c.dateOfBirth === dateOfBirth,
     );
+    for (const cert of targets) {
+      await this.deleteCertificate(cert.id);
+    }
+    return { deleted: targets.length };
   }
 
-  // Analytics
   async getAnalytics() {
     const certs = await this.getAllCertificates();
     const verifications = await this.getVerifications();
     return {
       totalCertificates: certs.length,
       validCertificates: certs.filter((c) => c.status === "valid").length,
-      expiredCertificates: certs.filter((c) => c.status === "expired").length,
       revokedCertificates: certs.filter((c) => c.status === "revoked").length,
       totalVerifications: verifications.length,
       recentVerifications: verifications.slice(-10).reverse(),

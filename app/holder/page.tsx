@@ -14,8 +14,8 @@ import { ArrowLeft, Copy, Download, ExternalLink, QrCode, Search, UserRoundSearc
 
 interface HolderCertificate {
   id: string;
-  companyName: string;
-  category: string;
+  studentName: string;
+  programmeOfStudy: string;
   classOfDegree?: string;
   dateOfAward?: string;
   status: string;
@@ -99,7 +99,7 @@ export default function HolderPortalPage() {
               <CardHeader>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <CardTitle>{certificate.category}</CardTitle>
+                    <CardTitle>{certificate.programmeOfStudy}</CardTitle>
                     <CardDescription>{certificate.classOfDegree || "Degree Certificate"}</CardDescription>
                   </div>
                   <Badge className={getCertificateStatusColor(certificate.status)}>{certificate.status}</Badge>

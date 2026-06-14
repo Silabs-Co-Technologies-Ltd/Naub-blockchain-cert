@@ -125,11 +125,11 @@ export function CertificateDownload({
               </div>
               <div class="field">
                 <div class="field-label">Student / Graduate Name:</div>
-                <div class="field-value">${certificate.companyName}</div>
+                <div class="field-value">${certificate.studentName}</div>
               </div>
               <div class="field">
                 <div class="field-label">Programme of Study:</div>
-                <div class="field-value">${certificate.category}</div>
+                <div class="field-value">${certificate.programmeOfStudy}</div>
               </div>
               <div class="field">
                 <div class="field-label">Matriculation No.:</div>
@@ -144,12 +144,12 @@ export function CertificateDownload({
                 <div class="field-value">${certificate.certificateNumber || certificate.id}</div>
               </div>
               <div class="field">
-                <div class="field-label">Phone:</div>
-                <div class="field-value">${certificate.phone}</div>
+                <div class="field-label">Date of Birth:</div>
+                <div class="field-value">${certificate.dateOfBirth}</div>
               </div>
               <div class="field">
-                <div class="field-label">Address:</div>
-                <div class="field-value">${certificate.address}</div>
+                <div class="field-label">Vice Chancellor:</div>
+                <div class="field-value">${certificate.viceChancellor}</div>
               </div>
               <div class="field">
                 <div class="field-label">Date Issued:</div>

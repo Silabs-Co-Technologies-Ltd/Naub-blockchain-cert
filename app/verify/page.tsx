@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -24,52 +24,34 @@ import {
   FileText,
   ExternalLink,
   QrCode,
-  Bot,
-  Send,
-  X,
-  MessageSquare,
-  Loader2,
-  Globe,
 } from "lucide-react";
 import { formatDate, getCertificateStatusColor } from "@/lib/certificate-utils";
-import type { Certificate } from "@/lib/database";
 import { QRScanner } from "@/components/qr-scanner";
 import { NaubBrand } from "@/components/naub-brand";
 
-type Language = "english" | "yoruba" | "hausa" | "igbo";
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
+interface PublicCertificate {
+  id: string;
+  programmeOfStudy: string;
+  classOfDegree: string;
+  dateOfAward: string;
+  institutionName: string;
+  certificateType: string;
+  status: string;
+  ipfsCid?: string;
+  revocationReason?: string;
+  revokedAt?: string;
 }
-
-const LANGUAGE_LABELS: { key: Language; label: string }[] = [
-  { key: "english", label: "English" },
-  { key: "yoruba", label: "Yoruba" },
-  { key: "hausa", label: "Hausa" },
-  { key: "igbo", label: "Igbo" },
-];
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();
   const [certificateId, setCertificateId] = useState("");
   const [fieldHashNotice, setFieldHashNotice] = useState("");
-  const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [certificate, setCertificate] = useState<PublicCertificate | null>(null);
   const [blockchainInfo, setBlockchainInfo] = useState<any>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [selectedLang, setSelectedLang] = useState<Language>("english");
-
-  // Chatbot state
-  const [showChatbot, setShowChatbot] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -79,22 +61,12 @@ export default function VerifyPage() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatMessages]);
-
   const verifyById = async (id: string) => {
     setIsSearching(true);
     setError(null);
     setHasSearched(true);
     setCertificate(null);
     setBlockchainInfo(null);
-    setShowChatbot(false);
-    setChatMessages([]);
-    setAiSummary(null);
-    setSelectedLang("english");
 
     try {
       const response = await fetch(`/api/verify/${id}`);
@@ -103,8 +75,6 @@ export default function VerifyPage() {
         const data = await response.json();
         setCertificate(data.certificate);
         setBlockchainInfo(data.blockchain);
-
-        generateAISummary(data.certificate);
 
         await fetch("/api/verify/log", {
           method: "POST",
@@ -141,44 +111,6 @@ export default function VerifyPage() {
     }
   };
 
-  const generateAISummary = async (cert: Certificate) => {
-    setIsGeneratingSummary(true);
-    setAiSummary(null);
-
-    try {
-      const response = await fetch("/api/verify/summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ certificate: cert }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAiSummary(data.summary);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setIsGeneratingSummary(false);
-    }
-  };
-
-  const parsedSummary = (summary: string): Record<Language, string> => {
-    const extract = (tag: string, nextTag: string | null) => {
-      const regex = nextTag
-        ? new RegExp(`${tag}:\\s*([\\s\\S]*?)(?=${nextTag}:|$)`)
-        : new RegExp(`${tag}:\\s*([\\s\\S]*?)$`);
-      return summary.match(regex)?.[1]?.trim() || "";
-    };
-
-    return {
-      english: extract("ENGLISH", "YORUBA"),
-      yoruba: extract("YORUBA", "HAUSA"),
-      hausa: extract("HAUSA", "IGBO"),
-      igbo: extract("IGBO", null),
-    };
-  };
-
   const handleQRScan = (data: string) => {
     setShowScanner(false);
     try {
@@ -191,62 +123,6 @@ export default function VerifyPage() {
     } catch {
       setCertificateId(data);
       verifyById(data);
-    }
-  };
-
-  const handleOpenChatbot = () => {
-    setShowChatbot(true);
-    if (chatMessages.length === 0) {
-      setChatMessages([
-        {
-          role: "assistant",
-          content: `Hi! I'm NAUB's certificate support assistant. I can help you understand verification, correction, or revalidation for ${certificate?.companyName}. What would you like to know?`,
-        },
-      ]);
-    }
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !certificate || isChatLoading) return;
-
-    const userMessage = chatInput.trim();
-    setChatInput("");
-
-    const newMessages: ChatMessage[] = [
-      ...chatMessages,
-      { role: "user", content: userMessage },
-    ];
-    setChatMessages(newMessages);
-    setIsChatLoading(true);
-
-    try {
-      const res = await fetch("/api/ai/renewal-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMessage,
-          certificate,
-          history: chatMessages.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setChatMessages([...newMessages, { role: "assistant", content: data.reply }]);
-      } else {
-        setChatMessages([
-          ...newMessages,
-          { role: "assistant", content: "Sorry, I encountered an issue. Please contact support@naub.edu.ng for certificate support." },
-        ]);
-      }
-    } catch {
-      setChatMessages([
-        ...newMessages,
-        { role: "assistant", content: "Service temporarily unavailable. Please contact support@naub.edu.ng." },
-      ]);
-    } finally {
-      setIsChatLoading(false);
     }
   };
 
@@ -326,31 +202,31 @@ export default function VerifyPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Certificate Holder Information</CardTitle>
+                      <CardTitle>Certificate Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Student / Graduate Name</p>
-                        <p className="font-semibold text-lg">{certificate.companyName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Programme / Department</p>
-                        <p className="font-semibold">{certificate.category}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Matriculation Number</p>
-                        <p className="font-semibold">{certificate.matriculationNumber || "Not recorded"}</p>
+                        <p className="text-sm text-muted-foreground">Programme of Study</p>
+                        <p className="font-semibold text-lg">{certificate.programmeOfStudy}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Class of Degree</p>
-                        <p className="font-semibold">{certificate.classOfDegree || "Not recorded"}</p>
+                        <p className="font-semibold">{certificate.classOfDegree}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Institution</p>
+                        <p className="font-semibold">{certificate.institutionName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Certificate Type</p>
+                        <p className="font-semibold">{certificate.certificateType}</p>
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Certificate Details</CardTitle>
+                      <CardTitle>Status</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
@@ -364,13 +240,15 @@ export default function VerifyPage() {
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Issue Date</p>
-                        <p className="font-semibold">{formatDate(certificate.dateIssued)}</p>
-                      </div>
-                      <div>
                         <p className="text-sm text-muted-foreground">Date of Award</p>
-                        <p className="font-semibold">{certificate.dateOfAward ? formatDate(certificate.dateOfAward) : formatDate(certificate.dateIssued)}</p>
+                        <p className="font-semibold">{formatDate(certificate.dateOfAward)}</p>
                       </div>
+                      {certificate.status === "revoked" && certificate.revocationReason && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Revocation Reason</p>
+                          <p className="font-semibold text-red-600">{certificate.revocationReason}</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -388,7 +266,7 @@ export default function VerifyPage() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Certificate Hash</p>
                       <div className="bg-muted p-3 rounded font-mono text-sm break-all">
-                        {certificate.blockchainHash}
+                        {blockchainInfo?.certificateHash}
                       </div>
                     </div>
 
@@ -396,29 +274,29 @@ export default function VerifyPage() {
                       <p className="text-sm text-muted-foreground mb-2">Issuance Transaction</p>
                       <div className="flex items-center gap-2">
                         <div className="bg-muted p-3 rounded font-mono text-sm break-all flex-1">
-                          {certificate.transactionHash}
+                          {blockchainInfo?.txHash}
                         </div>
                         <Button variant="outline" size="icon" title="View on blockchain explorer">
                           <ExternalLink className="h-4 w-4" />
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Block: {certificate.blockNumber}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Block: {blockchainInfo?.blockNumber}</p>
                     </div>
 
-                    {certificate.status === "revoked" && certificate.revocationTxHash && (
+                    {certificate.status === "revoked" && blockchainInfo?.revocationTxHash && (
                       <div className="border-t pt-4">
                         <p className="text-sm text-muted-foreground mb-2">Revocation Transaction</p>
                         <div className="flex items-center gap-2">
                           <div className="bg-red-50 p-3 rounded font-mono text-sm break-all flex-1 border border-red-200">
-                            {certificate.revocationTxHash}
+                            {blockchainInfo.revocationTxHash}
                           </div>
                           <Button variant="outline" size="icon" title="View revocation on blockchain explorer">
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Block: {certificate.revocationBlockNumber}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Block: {blockchainInfo.revocationBlockNumber}</p>
                         <p className="text-xs text-red-600 mt-1">
-                          Revoked: {new Date(certificate.revokedAt!).toLocaleString()}
+                          Revoked: {blockchainInfo.revokedAt ? new Date(blockchainInfo.revokedAt).toLocaleString() : "Unknown"}
                         </p>
                       </div>
                     )}
@@ -433,153 +311,6 @@ export default function VerifyPage() {
                         )}
                       </p>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* 3. Certificate support chatbot (expired or revoked only) */}
-                {(certificate.status === "expired" || certificate.status === "revoked") && (
-                  <Card className="border-blue-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Bot className="h-5 w-5 text-primary" />
-                        Certificate Support
-                      </CardTitle>
-                      <CardDescription>
-                        {certificate.status === "expired"
-                          ? "This certificate is no longer current. Chat with our AI assistant to learn about revalidation or registry support."
-                          : "This certificate has been revoked. Chat with our AI assistant for guidance."}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {!showChatbot ? (
-                        <Button onClick={handleOpenChatbot} className="gap-2 w-full" variant="outline">
-                          <MessageSquare className="h-4 w-4" />
-                          Chat with Certificate Assistant
-                        </Button>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="h-72 overflow-y-auto border rounded-lg p-4 space-y-3 bg-muted/30">
-                            {chatMessages.map((msg, i) => (
-                              <div
-                                key={i}
-                                className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                              >
-                                {msg.role === "assistant" && (
-                                  <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
-                                    <Bot className="h-4 w-4 text-primary" />
-                                  </div>
-                                )}
-                                <div
-                                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
-                                    msg.role === "user"
-                                      ? "bg-primary text-primary-foreground"
-                                      : "bg-card border"
-                                  }`}
-                                >
-                                  {msg.content}
-                                </div>
-                              </div>
-                            ))}
-                            {isChatLoading && (
-                              <div className="flex gap-2 justify-start">
-                                <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <Bot className="h-4 w-4 text-primary" />
-                                </div>
-                                <div className="bg-card border rounded-lg px-3 py-2">
-                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                </div>
-                              </div>
-                            )}
-                            <div ref={chatEndRef} />
-                          </div>
-
-                          <form onSubmit={handleSendMessage} className="flex gap-2">
-                            <Input
-                              placeholder="Ask about certificate revalidation, correction steps, timelines..."
-                              value={chatInput}
-                              onChange={(e) => setChatInput(e.target.value)}
-                              disabled={isChatLoading}
-                              className="flex-1"
-                            />
-                            <Button type="submit" size="icon" disabled={isChatLoading || !chatInput.trim()}>
-                              <Send className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => setShowChatbot(false)}
-                              title="Close chat"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </form>
-
-                          <p className="text-xs text-muted-foreground">
-                            For official guidance, contact{" "}
-                            <a href="mailto:support@naub.edu.ng" className="underline">
-                              support@naub.edu.ng
-                            </a>
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* 4. AI Multilingual Summary — last section, with language tabs */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Globe className="h-5 w-5 text-primary" />
-                      AI Verification Summary
-                    </CardTitle>
-                    <CardDescription>
-                      Automated certificate analysis — available in 4 languages
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Language tab buttons */}
-                    <div className="flex gap-1 mb-4 flex-wrap">
-                      {LANGUAGE_LABELS.map(({ key, label }) => (
-                        <button
-                          key={key}
-                          onClick={() => setSelectedLang(key)}
-                          className={`px-3 py-1 text-sm rounded-full border transition-colors ${
-                            selectedLang === key
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Content */}
-                    {isGeneratingSummary ? (
-                      <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
-                        <p className="text-muted-foreground">Generating multilingual summary...</p>
-                      </div>
-                    ) : aiSummary ? (
-                      <div
-                        className={`p-4 rounded-lg border ${
-                          certificate.status === "valid"
-                            ? "bg-green-50 border-green-200 text-green-800"
-                            : certificate.status === "expired"
-                              ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                              : "bg-red-50 border-red-200 text-red-800"
-                        }`}
-                      >
-                        <p className="text-sm leading-relaxed">
-                          {parsedSummary(aiSummary)[selectedLang] ||
-                            "Translation not available. Please select another language."}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Summary unavailable.</p>
-                    )}
                   </CardContent>
                 </Card>
               </div>

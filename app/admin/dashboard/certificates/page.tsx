@@ -16,9 +16,6 @@ import {
   ArrowLeft,
   Plus,
   Search,
-  Brain,
-  Bot,
-  Sparkles,
   RefreshCw,
   FileCheck,
   LogOut,
@@ -32,10 +29,6 @@ export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isNLSearch, setIsNLSearch] = useState(false);
-  const [nlResults, setNlResults] = useState<Certificate[] | null>(null);
-  const [nlExplanation, setNlExplanation] = useState("");
-  const [isNLSearching, setIsNLSearching] = useState(false);
 
   useEffect(() => {
     loadCertificates();
@@ -53,36 +46,12 @@ export default function CertificatesPage() {
     }
   };
 
-  const handleNLSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setIsNLSearching(true);
-    try {
-      const res = await fetch("/api/admin/nl-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setNlResults(data.results || []);
-        setNlExplanation(data.explanation || "");
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setIsNLSearching(false);
-    }
-  };
-
   const filteredCertificates = certificates.filter(
     (cert) =>
       cert.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cert.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cert.category.toLowerCase().includes(searchQuery.toLowerCase())
+      cert.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cert.programmeOfStudy.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const displayed = isNLSearch && nlResults !== null ? nlResults : filteredCertificates;
 
   return (
     <div className="min-h-screen bg-background">
@@ -127,7 +96,6 @@ export default function CertificatesPage() {
                 <CardTitle>All Certificates</CardTitle>
                 <CardDescription>
                   {certificates.length} total · {certificates.filter((c) => c.status === "valid").length} valid ·{" "}
-                  {certificates.filter((c) => c.status === "expired").length} expired ·{" "}
                   {certificates.filter((c) => c.status === "revoked").length} revoked
                 </CardDescription>
               </div>
@@ -138,69 +106,18 @@ export default function CertificatesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Search bar with NL toggle */}
+            {/* Search bar */}
             <div className="mb-6">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  {isNLSearch ? (
-                    <Bot className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                  ) : (
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  )}
-                  <form onSubmit={isNLSearch ? handleNLSearch : (e) => e.preventDefault()}>
-                    <input
-                      type="text"
-                      placeholder={
-                        isNLSearch
-                          ? 'e.g. "expired computer science certs" or "valid accounting graduates"'
-                          : "Search by ID, student name, or programme..."
-                      }
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        if (!isNLSearch) setNlResults(null);
-                      }}
-                    />
-                  </form>
-                </div>
-                <Button
-                  type="button"
-                  variant={isNLSearch ? "default" : "outline"}
-                  className="gap-2 shrink-0"
-                  onClick={() => {
-                    setIsNLSearch(!isNLSearch);
-                    setNlResults(null);
-                    setNlExplanation("");
-                    setSearchQuery("");
-                  }}
-                >
-                  <Brain className="h-4 w-4" />
-                  AI Search
-                </Button>
-                {isNLSearch && (
-                  <Button
-                    type="button"
-                    onClick={handleNLSearch}
-                    disabled={isNLSearching || !searchQuery.trim()}
-                    className="gap-2 shrink-0"
-                  >
-                    {isNLSearching ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                    Search
-                  </Button>
-                )}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by ID, student name, or programme..."
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              {isNLSearch && nlExplanation && (
-                <div className="mt-2 flex items-center gap-2 text-sm text-primary">
-                  <Sparkles className="h-3 w-3" />
-                  <span>{nlExplanation}</span>
-                  <span className="text-muted-foreground">— {nlResults?.length ?? 0} result(s)</span>
-                </div>
-              )}
             </div>
 
             {/* Table */}
@@ -224,11 +141,11 @@ export default function CertificatesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {displayed.map((cert) => (
+                      {filteredCertificates.map((cert) => (
                         <tr key={cert.id} className="border-t hover:bg-muted/50">
                           <td className="p-4 font-mono text-sm">{cert.id}</td>
-                          <td className="p-4">{cert.companyName}</td>
-                          <td className="p-4 text-sm text-muted-foreground">{cert.category}</td>
+                          <td className="p-4">{cert.studentName}</td>
+                          <td className="p-4 text-sm text-muted-foreground">{cert.programmeOfStudy}</td>
                           <td className="p-4 text-sm">{formatDate(cert.dateIssued)}</td>
                           <td className="p-4 text-sm">{formatDate(cert.dateOfAward || cert.dateIssued)}</td>
                           <td className="p-4">
@@ -249,14 +166,10 @@ export default function CertificatesPage() {
               </div>
             )}
 
-            {!isLoading && displayed.length === 0 && (
+            {!isLoading && filteredCertificates.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 <FileCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>
-                  {isNLSearch && nlResults !== null
-                    ? "No certificates match your AI search query"
-                    : "No certificates found"}
-                </p>
+                <p>No certificates found</p>
               </div>
             )}
           </CardContent>
